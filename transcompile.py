@@ -9,6 +9,7 @@ prompt_dict = {
     "loop_split": "please split the for loop into two loop and update its corresponding loop index",
     "loop_reorder": "please reorder the two for loops",
     "loop_bind": "please bind the loop with corresponding parallel variables"
+    "func_prefix": "sing the __global__ keyword to define a kernel function. A kernel function is a parallel function that runs on the GPU."
 }
 
 
@@ -99,7 +100,7 @@ class SophisticatedQLearningAgent:
         
 
 # Initialize and refine the sophisticated agent
-sophisticated_agent = SophisticatedQLearningAgent(states=10, actions=4)
+sophisticated_agent = SophisticatedQLearningAgent(states=10, actions=5)
 max_refinements = 5
 refinement_count = 0
 converged = False
