@@ -3,6 +3,14 @@ import random
 from environment import Env
 from collections import defaultdict
 
+# The Tranformation Action
+Actions = {
+    "loop_fuse": 0,
+    "loop_split": 1,
+    "loop_bind": 2,
+    "func_prefix": 3,
+}
+
 
 class QLearningAgent:
     def __init__(self, actions):
