@@ -45,25 +45,21 @@ class QLearningAgent:
         return random.choice(max_index_list)
 
 if __name__ == "__main__":
-    env = Env()
-    agent = QLearningAgent(actions=list(range(env.n_actions)))
-
+    agent = QLearningAgent(actions=[0, 1, 2, 3])
+    state = """
+    void add_kernel(float* output, float* input1, float* input2) {
+        for (int i = 0; i < 18; i++) {
+            for (int j = 0; j < 128; j++) {
+                int index = i * 128 + j;
+                output[index] = input1[index] + input2[index];
+            }
+        }
+    }
+    """
     for episode in range(1000):
-        state = env.reset()
-
-        while True:
-            env.render()
-
-            # take action and proceed one step in the environment
-            action = agent.get_action(str(state))
-            next_state, reward, done = env.step(action)
-
-            # with sample <s,a,r,s'>, agent learns new q function
-            agent.learn(str(state), action, reward, str(next_state))
-
-            state = next_state
-            env.print_value_all(agent.q_table)
-
-            # if episode ends, then break
-            if done:
-                break
+        # take action and proceed one step in the environment
+        action = agent.get_action(str(state))
+        next_state, reward = step(action, state)
+        # with sample <s,a,r,s'>, agent learns new q function
+        agent.learn(str(state), action, reward, str(next_state))
+        state = next_state

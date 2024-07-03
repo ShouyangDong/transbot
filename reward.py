@@ -1,6 +1,6 @@
-from func_test import run_compilation, runtime_test, unit_test, perf_test
+from func_test import check_compilation, check_runtime, run_tests, check_perf
 
-def reward_function(y, c):
+def reward_function(code, test_script_path="test.cu"):
     """
     This function evaluates the output of a program and returns a reward based on the following criteria:
     R1 if the program cannot be compiled (y != c)
@@ -9,23 +9,23 @@ def reward_function(y, c):
     R4 if the program passed all unit tests and improved runtime
 
     Parameters:
-    y (str): The actual output of the program.
-    c (str): The expected output of the program.
+    code (str): The tested program.
 
     Returns:
     int: The reward value based on the program's performance.
     """
-    if not run_compilation()：
-        return -1
+    # First compile the code
+    reward = check_compilation(code, test_script_path)
 
-    elif run_compilation() and not runtime_test():
-        return 0
+    if reward > 0:
+        runtime_reward = check_runtime("output")
+        reward += runtime_reward
 
-    elif runtime_test() and not unit_test():
-        return 1
+    # Run unit test
+    test_reward = run_tests(test_script_path)
+    reward += test_reward
 
-    elif unit_test() and not perf_test():
-        return 2
-
-    else:
-        return 5
+    # Run perf test
+    perf_reward = check_peft(test_script_path)
+    reward += perf_reward
+    return reward
