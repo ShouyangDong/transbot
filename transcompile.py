@@ -4,6 +4,7 @@ import random
 from transformation import get_LLM_answers
 from reward import reward_function
 
+
 class SophisticatedQLearningAgent:
     def __init__(
         self,
