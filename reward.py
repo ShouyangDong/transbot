@@ -1,5 +1,6 @@
 from func_test import check_compilation, check_runtime, run_tests, check_perf
 
+
 def reward_function(file_path, test_script_path="test.py"):
     """
     This function evaluates the output of a program and returns a reward based on the following criteria:
@@ -25,7 +26,7 @@ def reward_function(file_path, test_script_path="test.py"):
     test_reward = run_tests(file_path, test_script_path)
     reward += test_reward
 
-    #TODO: add peft test
+    # TODO: add peft test
     # # Run perf test
     # perf_reward = check_peft(test_script_path)
     # reward += perf_reward

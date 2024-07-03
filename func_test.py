@@ -9,6 +9,7 @@ R_TESTS_PASSED = 20
 R_TESTS_FAILED = -15
 R_PERFORMANCE_BONUS = 5
 
+
 def check_compilation(so_name, file_name):
     """
     This function attempts to compile a file using the NVIDIA CUDA compiler (nvcc) and returns
@@ -39,11 +40,11 @@ def check_compilation(so_name, file_name):
 def check_runtime(file_name, test_file):
     """
     Executes a runtime test on a specific file using a designated test script and returns the result of the execution.
-    
+
     Parameters:
     file_name (str): The name of the file to be tested.
     test_file (str): The name of the Python script file containing the test logic.
-    
+
     Returns:
     tuple: A tuple containing a boolean and the output (or error message).
     """
@@ -55,7 +56,7 @@ def check_runtime(file_name, test_file):
             encoding="utf-8",
             check=True,
             text=True,
-            timeout=400,           
+            timeout=400,
         )
         return R_RUNTIME_SUCCESS
     except subprocess.TimeoutExpired:
@@ -63,14 +64,15 @@ def check_runtime(file_name, test_file):
     except subprocess.CalledProcessError as e:
         return R_RUNTIME_FAILURE
 
+
 def run_tests(file_name, test_file):
     """
     Executes a runtime test on a specific file using a designated test script and returns the result of the execution.
-    
+
     Parameters:
     file_name (str): The name of the file to be tested.
     test_file (str): The name of the Python script file containing the test logic.
-    
+
     Returns:
     tuple: A tuple containing a boolean and the output (or error message).
     """
@@ -82,7 +84,7 @@ def run_tests(file_name, test_file):
             encoding="utf-8",
             check=True,
             text=True,
-            timeout=400,           
+            timeout=400,
         )
         if "OK" in output.stdout:
             return R_TESTS_PASSED
@@ -94,8 +96,7 @@ def run_tests(file_name, test_file):
         return R_TESTS_FAILED
 
 
-
 def perf_test():
     """Read the kernel launch time from the saved runtime file."""
-    #TODO:
+    # TODO:
     return None

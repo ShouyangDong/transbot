@@ -5,11 +5,11 @@ import openai
 from reward import reward_function
 
 prompt_dict = {
-    "loop_fuse" : "Please the two for loops into one and update its corresponding loop index",
+    "loop_fuse": "Please the two for loops into one and update its corresponding loop index",
     "loop_split": "please split the for loop into two loop and update its corresponding loop index",
     "loop_reorder": "please reorder the two for loops",
-    "loop_bind": "please bind the loop with corresponding parallel variables"
-    "func_prefix": "sing the __global__ keyword to define a kernel function. A kernel function is a parallel function that runs on the GPU."
+    "loop_bind": "please bind the loop with corresponding parallel variables",
+    "func_prefix": "sing the __global__ keyword to define a kernel function. A kernel function is a parallel function that runs on the GPU.",
 }
 
 
@@ -20,12 +20,12 @@ def get_LLM_answers(question, action):
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": prompt}
-            ]
+                {"role": "user", "content": prompt},
+            ],
         )
-        
-        if 'choices' in response and len(response['choices']) > 0:
-            message_content = response['choices'][0]['message']['content']
+
+        if "choices" in response and len(response["choices"]) > 0:
+            message_content = response["choices"][0]["message"]["content"]
             print(f"Received answer: {message_content}")
             return [message_content]
         else:
@@ -38,8 +38,20 @@ def get_LLM_answers(question, action):
         print(f"An unexpected error occurred: {e}")
         return None
 
+
 class SophisticatedQLearningAgent:
-    def __init__(self, states, actions, learning_rate=0.1, discount_factor=0.95, exploration_rate=1.0, min_exploration_rate=0.01, exploration_decay_rate=0.995, max_episodes=10000, max_steps_per_episode=200):
+    def __init__(
+        self,
+        states,
+        actions,
+        learning_rate=0.1,
+        discount_factor=0.95,
+        exploration_rate=1.0,
+        min_exploration_rate=0.01,
+        exploration_decay_rate=0.995,
+        max_episodes=10000,
+        max_steps_per_episode=200,
+    ):
         # Initialize the Q-learning agent with specified parameters.
         self.states = states  # Number of states in the environment
         self.actions = actions  # Number of possible actions
@@ -47,7 +59,9 @@ class SophisticatedQLearningAgent:
         self.discount_factor = discount_factor  # Factor for discounting future rewards
         self.exploration_rate = exploration_rate  # Initial exploration rate
         self.min_exploration_rate = min_exploration_rate  # Minimum exploration rate
-        self.exploration_decay_rate = exploration_decay_rate  # Rate of decay for exploration
+        self.exploration_decay_rate = (
+            exploration_decay_rate  # Rate of decay for exploration
+        )
         self.max_episodes = max_episodes  # Maximum number of training episodes
         self.max_steps_per_episode = max_steps_per_episode  # Maximum steps per episode
         self.q_table = np.zeros((states, actions))  # Initialize Q-table with zeros
@@ -55,9 +69,13 @@ class SophisticatedQLearningAgent:
     def choose_action(self, state):
         # Choose an action based on the current state and exploration-exploitation strategy.
         if random.uniform(0, 1) < self.exploration_rate:
-            action = random.randint(0, self.actions - 1)  # Explore: choose a random action
+            action = random.randint(
+                0, self.actions - 1
+            )  # Explore: choose a random action
         else:
-            action = np.argmax(self.q_table[state, :])  # Exploit: choose the best known action
+            action = np.argmax(
+                self.q_table[state, :]
+            )  # Exploit: choose the best known action
         return action
 
     def learn(self, state, action, reward, next_state):
@@ -68,11 +86,17 @@ class SophisticatedQLearningAgent:
 
     def update_exploration_rate(self):
         # Decrease exploration rate over time.
-        self.exploration_rate = max(self.min_exploration_rate, self.exploration_rate * self.exploration_decay_rate)
+        self.exploration_rate = max(
+            self.min_exploration_rate,
+            self.exploration_rate * self.exploration_decay_rate,
+        )
 
     def has_converged(self, threshold=0.005):
         # Check if the Q-values have converged.
-        return np.all(np.abs(self.q_table - np.max(self.q_table, axis=1, keepdims=True)) < threshold)
+        return np.all(
+            np.abs(self.q_table - np.max(self.q_table, axis=1, keepdims=True))
+            < threshold
+        )
 
     def train(self):
         # Train the agent over a series of episodes.
@@ -93,11 +117,11 @@ class SophisticatedQLearningAgent:
         # Resize the Q-table if the number of states or actions increases.
         if new_states > self.states or new_actions > self.actions:
             new_q_table = np.zeros((new_states, new_actions))
-            new_q_table[:self.states, :self.actions] = self.q_table
+            new_q_table[: self.states, : self.actions] = self.q_table
             self.q_table = new_q_table
             self.states = new_states
             self.actions = new_actions
-        
+
 
 # Initialize and refine the sophisticated agent
 sophisticated_agent = SophisticatedQLearningAgent(states=10, actions=5)

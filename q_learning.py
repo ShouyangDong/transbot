@@ -3,6 +3,7 @@ import random
 from environment import Env
 from collections import defaultdict
 
+
 class QLearningAgent:
     def __init__(self, actions):
         # actions = [0, 1, 2, 3]
@@ -43,6 +44,7 @@ class QLearningAgent:
             elif value == max_value:
                 max_index_list.append(index)
         return random.choice(max_index_list)
+
 
 if __name__ == "__main__":
     agent = QLearningAgent(actions=[0, 1, 2, 3])
