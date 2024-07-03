@@ -86,7 +86,7 @@ def run_tests(file_name, test_file):
             text=True,
             timeout=400,
         )
-        if "OK" in output.stdout:
+        if "success!" in output.stdout:
             return R_TESTS_PASSED
         else:
             return R_TESTS_FAILED
