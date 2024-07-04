@@ -12,7 +12,7 @@ Actions = {
 }
 
 
-class QLearningAgent:
+class QLearningAgent(class):
     def __init__(self, actions):
         # actions = [0, 1, 2, 3]
         self.actions = actions
@@ -66,10 +66,24 @@ if __name__ == "__main__":
         }
     }
     """
-    for episode in range(1000):
-        # take action and proceed one step in the environment
-        action = agent.get_action(str(state))
-        next_state, reward = step(action, state)
-        # with sample <s,a,r,s'>, agent learns new q function
-        agent.learn(str(state), action, reward, str(next_state))
-        state = next_state
+    for episode in range(100):
+        total_reward = 0
+        done = False
+
+        while not done:
+            # 将代码状态转换为可以被智能体处理的形式，例如字符串或数字ID
+            state_representation = str(state)
+
+            # 获取动作
+            action = agent.get_action(state_representation)
+
+            # 在环境中执行动作
+            next_state, reward, done = env.step(action, state)
+
+            # 更新总奖励和状态
+            total_reward += reward
+            state = next_state
+            # 学习新的经验
+            agent.learn(state_representation, action, reward, str(next_state))
+
+        print(f"Episode {episode}: Total reward = {total_reward}")
