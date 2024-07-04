@@ -222,6 +222,46 @@ class LoopBindVisitor(NodeTransformer):
         return node
 
 
+def loop_split(code, loop_index, factor=2):
+    code = code.replace("__global__ ", "")
+    code = code.replace("threadIdx.x ", "threadIdx_x")
+    parser = c_parser.CParser()
+    ast = parser.parse(code)
+    generator = c_generator.CGenerator()
+    visitor = LoopSplitVisitor(loop_index, factor=factor)
+    visitor.visit(ast)
+    code = generator.visit(ast)
+    code = code.replace("", "__global__ ")
+    code = code.replace("threadIdx_x", "threadIdx.x")
+    return code
+
+
+def loop_fuse(code, loop_index1, loop_index2):
+    code = code.replace("__global__ ", "")
+    code = code.replace("threadIdx.x ", "threadIdx_x")
+    parser = c_parser.CParser()
+    ast = parser.parse(code)
+    generator = c_generator.CGenerator()
+    visitor = LoopFuseVisitor(loop_index1, loop_index2)
+    visitor.visit(ast)
+    code = generator.visit(ast)
+    code = code.replace("", "__global__ ")
+    code = code.replace("threadIdx_x", "threadIdx.x")
+    return code
+
+
+def loop_bind(code, loop_index, thread_name):
+    thread_name = "threadIdx_x" if thread_name == "threadIdx.x" else thread_name
+    parser = c_parser.CParser()
+    ast = parser.parse(code)
+    generator = c_generator.CGenerator()
+    visitor = LoopBindVisitor(loop_index, thread_name)
+    visitor.visit(ast)
+    code = generator.visit(ast)
+    code = state.replace("threadIdx_x", "threadIdx.x")
+    return code
+
+
 if __name__ == "__main__":
     original_code = """
     void add_kernel(float* output, float* input1, float* input2) {

@@ -1,74 +1,5 @@
-# class CodeTransformer:
-#     def __init__(self):
-#         self.actions = ["loop_fuse", "loop_split", "loop_bind", "func_prefix"]
-
-#     def transform_code(self, code):
-#         # 将代码字符串转换为AST
-#         ast = self.parse_to_ast(code)
-        
-#         # 搜索并应用转换
-#         transformed_ast = self.apply_transforms(ast)
-        
-#         # 将AST转换回代码字符串
-#         new_code = self.ast_to_string(transformed_ast)
-#         return new_code
-
-#     def parse_to_ast(self, code):
-#         # 使用适当的库将代码解析为AST
-#         pass
-
-#     def apply_transforms(self, ast):
-#         # 定义转换规则
-#         transforms = [
-#             self.add_global_prefix,
-#             self.split_loops,
-#             self.bind_loops_to_threads,
-#             self.adjust_loop_bounds
-#         ]
-        
-#         # 应用每个转换规则
-#         for transform in transforms:
-#             ast = transform(ast)
-        
-#         return ast
-
-#     def add_global_prefix(self, ast):
-#         # 在函数定义前添加 __global__ 限定符
-#         pass
-
-#     def split_loops(self, ast):
-#         # 将外层循环分割，以便应用到不同的线程块和线程上
-#         pass
-
-#     def bind_loops_to_threads(self, ast):
-#         # 使用 blockIdx.x 和 threadIdx.x 绑定循环到线程
-#         pass
-
-#     def adjust_loop_bounds(self, ast):
-#         # 调整循环边界以匹配特定的执行维度
-#         pass
-
-#     def ast_to_string(self, ast):
-#         # 将AST转换回代码字符串
-#         pass
-
-#     def is_global_state(self, code):
-#         if run_tests(code):
-#             return True
-#         return False
-
-#     def heuristic(self, current_code):
-#         score = 0
-#         if "__global__" in current_code:
-#             score += 10
-
-#         elif "threadidx.x" in current_code:
-#             score += 10
-#         return score
-
-# def a_star_search(start_state, goal_state, action, heuristic):
 import heapq
-
+from ast_transformation import loop_bind, loop_split, loop_fuse
 
 
 class Node:
@@ -103,6 +34,7 @@ def a_star_search(start_state, goal_state, actions, heuristic):
             if next_node not in open_set:
                 heapq.heappush(open_set, (next_cost + heuristic(next_state), next_node))
 
+
 def reconstruct_path(node):
     # 从目标节点回溯到起始节点，以构建完整的路径
     path = []
@@ -120,32 +52,19 @@ def heuristic(state):
         h_cost -= 10
     return h_cost
 
+
 def apply_action(start_state, action):
     if action == "func_prefix":
         state = "__global__ " + start_state
     elif action == "loop_fuse":
-        parser = c_parser.CParser()
-        ast = parser.parse(start_state)
-        generator = c_generator.CGenerator()
-        visitor = LoopFuseVisitor("i", "j")
-        visitor.visit(ast)
-        state = generator.visit(ast)
+        state = loop_fuse(start_state)
     elif action == "loop_bind":
-        parser = c_parser.CParser()
-        ast = parser.parse(start_state)
-        generator = c_generator.CGenerator()
-        visitor = LoopBindVisitor("i", "threadIdx.x")
-        visitor.visit(ast)
-        state = generator.visit(ast)
+        state = loop_bind(start_state, "threadIdx.x")
     elif action == "loop_split":
-        parser = c_parser.CParser()
-        ast = parser.parse(start_state)
-        generator = c_generator.CGenerator()
-        visitor = LoopSplitVisitor("i", factor=2)
-        visitor.visit(ast)
-        state = generator.visit(ast)
+        state = loop_split(start_state, factor=2)
     else:
         raise RuntimeError("Cannot handle!")
+
 
 # 定义初始状态和目标状态
 start_state = """
