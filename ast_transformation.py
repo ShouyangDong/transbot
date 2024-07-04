@@ -67,6 +67,7 @@ def iter_fields(node):
             index += len(child)
             yield name, child
 
+
 class LoopFuseVisitor(c_ast.NodeVisitor):
     def __init__(self, axis_name_1, axis_name_2):
         self.axis_name_1 = axis_name_1
@@ -115,6 +116,7 @@ class LoopFuseVisitor(c_ast.NodeVisitor):
                     "int", "fuse_" + self.axis_name_1 + "_" + self.axis_name_2
                 )
                 node.right = c_ast.Constant("int", 0)
+
 
 class LoopSplitVisitor(c_ast.NodeVisitor):
     def __init__(self, axis_name, factor):
@@ -190,23 +192,35 @@ class LoopSplitVisitor(c_ast.NodeVisitor):
             )
 
 
-class LoopBindVisitor(c_ast.NodeVisitor):
+class LoopBindVisitor(NodeTransformer):
     def __init__(self, axis_name, thread_name):
         self.axis_name = axis_name
         self.thread_name = thread_name
 
     def visit_For(self, node):
-        print(node.init.decls[0].name)
-        # if node.init.decls[0].name == self.axis_name:
-        #     node.init.decls[0].name = self.thread_name
-        #     stmt = node.stmt
-        #     generator = c_generator.CGenerator()
-        #     print(generator.visit(stmt))
-        #     # replace the for loop as condition node
-        #     if_node = c_ast.For()
+        if node.init.decls[0].name == self.axis_name:
+            node.init.decls[0].name = self.thread_name
+            stmt = self.visit(node.stmt)
+            # replace the for loop as condition node
+            if_node = c_ast.If(
+                cond=c_ast.BinaryOp(
+                    op=node.cond.op,
+                    left=c_ast.ID(self.thread_name),
+                    right=node.cond.right,
+                ),
+                iftrue=c_ast.Compound(block_items=[stmt]),
+                iffalse=None,
+            )
 
-        #     return if_node
-        # return node
+            return if_node
+        self.generic_visit(node)
+        return node
+
+    def visit_ID(self, node):
+        if node.name == self.axis_name:
+            return c_ast.ID(self.thread_name)
+        return node
+
 
 if __name__ == "__main__":
     original_code = """
