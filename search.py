@@ -1,5 +1,7 @@
 import heapq
+import random
 from ast_transformation import loop_bind, loop_split, loop_fuse
+from ast_visitor import get_ajcent_loop
 
 
 class Node:
@@ -28,7 +30,7 @@ def a_star_search(start_state, goal_state, actions, heuristic):
 
         for action in actions:
             next_state = apply_action(current_node.state, action)
-            next_cost = current_node.cost + action.cost
+            next_cost = current_node.cost + 10  # action.cost
             next_node = Node(next_state, current_node, action)
 
             if next_node not in open_set:
@@ -56,12 +58,22 @@ def heuristic(state):
 def apply_action(start_state, action):
     if action == "func_prefix":
         state = "__global__ " + start_state
+        return state
+
     elif action == "loop_fuse":
-        state = loop_fuse(start_state)
+        # get the ajcent aixs
+        axis = get_ajcent_loop(start_state)
+        state = loop_fuse(start_state, axis[0], axis[1])
+        return state
+
     elif action == "loop_bind":
         state = loop_bind(start_state, "threadIdx.x")
+
     elif action == "loop_split":
-        state = loop_split(start_state, factor=2)
+        axises = get_ajcent_loop(start_state)
+        axis = random.choice(axises)
+        state = loop_split(start_state, loop_index=axis, factor=2)
+
     else:
         raise RuntimeError("Cannot handle!")
 
