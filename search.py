@@ -66,32 +66,33 @@ def apply_action(start_state, action):
         raise RuntimeError("Cannot handle!")
 
 
-# 定义初始状态和目标状态
-start_state = """
-void add_kernel(float* output, float* input1, float* input2) {
-    for (int i = 0; i < 18; i++) {
-        for (int j = 0; j < 128; j++) {
-            int index = i * 128 + j;
-            output[index] = input1[index] + input2[index];
-        }
-    }
-}
-"""
-
-goal_state = """
-__global__ void add_kernel(float* output, float* input1, float* input2) {
-    if (blockIdx.x < 3) {
-        if (threadIdx.x < 1024) {
-            if (blockIdx.x * 1024 + threadIdx.x < 2304) {
-                output[blockIdx.x * 1024 + threadIdx.x] = input1[blockIdx.x * 1024 + threadIdx.x] + input2[blockIdx.x * 1024 + threadIdx.x];
+if __name__ == "__main__":
+    # 定义初始状态和目标状态
+    start_state = """
+    void add_kernel(float* output, float* input1, float* input2) {
+        for (int i = 0; i < 18; i++) {
+            for (int j = 0; j < 128; j++) {
+                int index = i * 128 + j;
+                output[index] = input1[index] + input2[index];
             }
         }
     }
-}
-"""
+    """
 
-# 执行 A* 搜索
-actions = ["loop_fuse", "loop_split", "loop_bind", "func_prefix"]
+    goal_state = """
+    __global__ void add_kernel(float* output, float* input1, float* input2) {
+        if (blockIdx.x < 3) {
+            if (threadIdx.x < 1024) {
+                if (blockIdx.x * 1024 + threadIdx.x < 2304) {
+                    output[blockIdx.x * 1024 + threadIdx.x] = input1[blockIdx.x * 1024 + threadIdx.x] + input2[blockIdx.x * 1024 + threadIdx.x];
+                }
+            }
+        }
+    }
+    """
 
-# 定义可能的动作列表
-transformation_sequence = a_star_search(start_state, goal_state, actions, heuristic)
+    # 执行 A* 搜索
+    actions = ["loop_fuse", "loop_split", "loop_bind", "func_prefix"]
+
+    # 定义可能的动作列表
+    transformation_sequence = a_star_search(start_state, goal_state, actions, heuristic)
