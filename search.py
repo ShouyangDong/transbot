@@ -56,23 +56,31 @@ def heuristic(state):
 
 
 def apply_action(start_state, action):
+    print("[INFO]***************state: ", start_state)
     if action == "func_prefix":
         state = "__global__ " + start_state
+        print("[INFO]****************final state1: ", state)
         return state
 
     elif action == "loop_fuse":
         # get the ajcent aixs
         axis = get_ajcent_loop(start_state)
+        print(axis)
         state = loop_fuse(start_state, axis[0], axis[1])
+        print("[INFO]****************final state2: ", state)
         return state
 
     elif action == "loop_bind":
         state = loop_bind(start_state, "threadIdx.x")
+        print("[INFO]****************final state3: ", state)
+        return state
 
     elif action == "loop_split":
         axises = get_ajcent_loop(start_state)
         axis = random.choice(axises)
         state = loop_split(start_state, loop_index=axis, factor=2)
+        print("[INFO]****************final state3: ", state)
+        return state
 
     else:
         raise RuntimeError("Cannot handle!")
