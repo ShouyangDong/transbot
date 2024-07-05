@@ -4,7 +4,7 @@ from ast_transformation import loop_bind, loop_split, loop_fuse
 from ast_visitor import get_ajcent_loop
 
 
-class Node:
+class Node(object):
     def __init__(self, state, parent=None, action=None):
         self.state = state
         self.parent = parent
@@ -66,6 +66,16 @@ def heuristic(state):
 
 
 def apply_action(start_state, action):
+    """
+    Apply a specific refactoring action to the given C code state.
+
+    Parameters:
+    - start_state: A string representing the initial C code.
+    - action: A string specifying the refactoring action to apply.
+
+    Returns:
+    - A tuple containing the new state of the code and the cost of the action.
+    """
     if action == "func_prefix":
         if "__global__" in start_state:
             return start_state, 100
