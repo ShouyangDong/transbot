@@ -2,11 +2,20 @@ from pycparser import c_parser, c_ast, c_generator
 
 
 class LoopVariableVisitor(c_ast.NodeVisitor):
+    """
+    Custom visitor designed to extract loop variable names from C code.
+    """
+
     def __init__(self):
         self.loop_index = []
 
     def visit_For(self, node):
-        # 假设循环的初始化部分是变量声明
+        """
+        Visit For loop nodes to extract loop variables.
+
+        Parameters:
+        node: A node of type c_ast.For representing a 'for' loop.
+        """
         for decl in node.init:
             if isinstance(decl, c_ast.Decl):  # 检查是否是声明
                 self.loop_index.append(decl.name)
@@ -15,6 +24,21 @@ class LoopVariableVisitor(c_ast.NodeVisitor):
 
 
 def get_ajcent_loop(code):
+    """
+    Parses C code and extracts the variables of adjacent loops.
+
+    Parameters:
+    code: A string containing C code.
+
+    Returns:
+    A list of names of the loop variables.
+    """
+    # Check if the code contains a GPU kernel function declaration
+    is_global_func = "__global__" in code
+    if is_global_func:
+        # Clean up the kernel function declaration if it exists
+        code = code.replace("__global__ ", "")
+    code = code.replace("threadIdx.x ", "threadIdx_x")
     parser = c_parser.CParser()
     ast = parser.parse(code)
     visitor = LoopVariableVisitor()
