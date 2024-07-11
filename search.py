@@ -166,10 +166,11 @@ def apply_action(start_state, action):
 
     elif action == "loop_bind":
         axises = get_ajcent_loop(start_state)
-        if "threadIdx.x" in start_state:
-            return start_state, 100
         axis = random.choice(axises)
-        state = loop_bind(start_state, loop_index=axis, thread_name="threadIdx.x")
+        name = random.choice(["threadIdx.x", "blockIdx.x"])
+        if name in start_state:
+            return start_state, 100
+        state = loop_bind(start_state, loop_index=axis, thread_name=name)
         return state, 10
 
     elif action == "loop_split":
