@@ -4,6 +4,7 @@ import subprocess
 from ast_transformation import loop_bind, loop_split, loop_fuse
 from ast_visitor import get_ajcent_loop
 
+
 def run_test(file_name, test_file):
     try:
         output = subprocess.run(
@@ -20,6 +21,7 @@ def run_test(file_name, test_file):
         return False, "timeout"
     except subprocess.CalledProcessError as e:
         return False, e.output
+
 
 def run_compilation(so_name, file_name):
     try:
@@ -61,7 +63,6 @@ def a_star_search(start_state, actions, heuristic):
         # 从元组中提取 Node 对象
         return node_tuple[1]
 
-
     def check_file(code):
         template_code = """extern "C" void add_kernel(float *C, float *A, float *B, int size) {
             float *d_A, *d_B, *d_C;
@@ -94,13 +95,12 @@ def a_star_search(start_state, actions, heuristic):
         with open("./add_18_128.cu", mode="w") as f:
             f.write(code)
             f.close()
-        
+
         success, output = run_compilation("./add_18_128.so", "./add_18_128.cu")
         print("[INFO]******************output1: ", output)
         success, output = run_test("./add_18_128.cu", "./unittest/add_test.py")
         print("[INFO]******************output2: ", output)
         return success
-
 
     open_set = []
     start_node = Node(start_state)
