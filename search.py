@@ -57,6 +57,41 @@ class Node(object):
     def __lt__(self, other):
         return self.total_cost < other.total_cost
 
+def compile_check(code):
+    template_code = """extern "C" void add_kernel(float *C, float *A, float *B, int size) {
+        float *d_A, *d_B, *d_C;
+
+        cudaMalloc(&d_A, size * sizeof(float));
+        cudaMalloc(&d_B, size * sizeof(float));
+        cudaMalloc(&d_C, size * sizeof(float));
+
+        cudaMemcpy(d_A, A, size * sizeof(float), cudaMemcpyHostToDevice);
+        cudaMemcpy(d_B, B, size * sizeof(float), cudaMemcpyHostToDevice);
+
+        dim3 blockSize(1024);
+        dim3 numBlocks((size + 1024 - 1) / 1024);
+
+        add<<<numBlocks, blockSize>>>(d_A, d_B, d_C);
+
+        cudaMemcpy(C, d_C, size * sizeof(float), cudaMemcpyDeviceToHost);
+
+        cudaFree(d_A);
+        cudaFree(d_B);
+        cudaFree(d_C);
+        }
+    """
+    with open("./macro/cuda_macro.txt", "r") as f:
+        macro = f.read()
+        f.close()
+
+    code = macro + code + template_code
+
+    with open("./add_18_128.cu", mode="w") as f:
+        f.write(code)
+        f.close()
+
+    success, output = run_compilation("./add_18_128.so", "./add_18_128.cu")
+    return success
 
 def a_star_search(start_state, actions, heuristic):
     def node_from_tuple(node_tuple):
@@ -132,8 +167,8 @@ def reconstruct_path(node):
 
 def heuristic(state):
     h_cost = 40
-    if "__global__" in state:
-        h_cost -= 10
+    if compile_check(state):
+        h_cost -= 20
     if "threadIdx.x" in state:
         h_cost -= 10
     if "blockIdx.x" in state:
