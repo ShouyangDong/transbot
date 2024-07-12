@@ -225,7 +225,6 @@ class LoopBindVisitor(NodeTransformer):
 def loop_split(code, loop_index, factor=2):
     is_global_func = True if "__global__" in code else False
     code = code.replace("__global__ ", "")
-    code = code.replace("threadIdx.x ", "threadIdx_x")
     parser = c_parser.CParser()
     ast = parser.parse(code)
     generator = c_generator.CGenerator()
@@ -234,14 +233,12 @@ def loop_split(code, loop_index, factor=2):
     code = generator.visit(ast)
 
     code = "__global__ " + code if is_global_func else code
-    code = code.replace("threadIdx_x", "threadIdx.x")
     return code
 
 
 def loop_fuse(code, loop_index1, loop_index2):
     is_global_func = True if "__global__" in code else False
     code = code.replace("__global__ ", "")
-    code = code.replace("threadIdx.x ", "threadIdx_x")
 
     parser = c_parser.CParser()
     ast = parser.parse(code)
@@ -251,14 +248,12 @@ def loop_fuse(code, loop_index1, loop_index2):
     code = generator.visit(ast)
 
     code = "__global__ " + code if is_global_func else code
-    code = code.replace("threadIdx_x", "threadIdx.x")
     return code
 
 
 def loop_bind(code, loop_index, thread_name):
     is_global_func = True if "__global__" in code else False
     code = code.replace("__global__ ", "")
-    thread_name = "threadIdx_x" if thread_name == "threadIdx.x" else thread_name
     parser = c_parser.CParser()
     ast = parser.parse(code)
     generator = c_generator.CGenerator()
@@ -266,7 +261,6 @@ def loop_bind(code, loop_index, thread_name):
     visitor.visit(ast)
     code = generator.visit(ast)
     code = "__global__ " + code if is_global_func else code
-    code = code.replace("threadIdx_x", "threadIdx.x")
     return code
 
 

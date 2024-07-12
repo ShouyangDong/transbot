@@ -182,7 +182,9 @@ def apply_action(start_state, action):
         if len(axises) < 1:
             return start_state, 100
         axis = random.choice(axises)
-        state = loop_split(start_state, loop_index=axis, factor=2)
+        factors= [1024, 256]
+        factor = random.choice(factors)
+        state = loop_split(start_state, loop_index=axis, factor=factor)
         return state, 10
 
     else:
