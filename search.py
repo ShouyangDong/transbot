@@ -57,6 +57,7 @@ class Node(object):
     def __lt__(self, other):
         return self.total_cost < other.total_cost
 
+
 def compile_check(code):
     template_code = """extern "C" void add_kernel(float *C, float *A, float *B, int size) {
         float *d_A, *d_B, *d_C;
@@ -92,6 +93,7 @@ def compile_check(code):
 
     success, output = run_compilation("./add_18_128.so", "./add_18_128.cu")
     return success
+
 
 def a_star_search(start_state, actions, heuristic):
     def node_from_tuple(node_tuple):
@@ -131,8 +133,6 @@ def a_star_search(start_state, actions, heuristic):
             f.write(code)
             f.close()
 
-        success, output = run_compilation("./add_18_128.so", "./add_18_128.cu")
-        print("[INFO]******************output1: ", output)
         success, output = run_test("./add_18_128.cu", "./unittest/add_test.py")
         print("[INFO]******************output2: ", output)
         return success
@@ -204,7 +204,7 @@ def apply_action(start_state, action):
     elif action == "loop_bind":
         axises = get_ajcent_loop(start_state)
         if len(axises) < 1:
-            return start_state, 100 
+            return start_state, 100
         axis = random.choice(axises)
         name = random.choice(["threadIdx.x", "blockIdx.x"])
         if name in start_state:
@@ -217,7 +217,7 @@ def apply_action(start_state, action):
         if len(axises) < 1:
             return start_state, 100
         axis = random.choice(axises)
-        factors= [1024, 256]
+        factors = [1024, 256]
         factor = random.choice(factors)
         state = loop_split(start_state, loop_index=axis, factor=factor)
         return state, 10
