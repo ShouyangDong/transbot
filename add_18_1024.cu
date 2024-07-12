@@ -3,16 +3,23 @@
 #include <float.h>
 #include <cuda_runtime.h>
 #include <cuda.h>
-__global__ 
-    void add(float* output, float* input1, float* input2) {
-        for (int i = 0; i < 18; i++) {
-            for (int j = 0; j < 1024; j++) {
-                int index = i * 1024 + j;
-                output[index] = input1[index] + input2[index];
-            }
+__global__ void add(float *output, float *input1, float *input2)
+{
+  if (blockIdx.x < 18)
+  {
+    {
+      if (threadIdx.x < 1024)
+      {
+        {
+          int index = (blockIdx.x * 1024) + threadIdx.x;
+          output[index] = input1[index] + input2[index];
         }
+      }
     }
-    extern "C" void add_kernel(float *C, float *A, float *B, int size) {
+  }
+}
+
+extern "C" void add_kernel(float *C, float *A, float *B, int size) {
             float *d_A, *d_B, *d_C;
 
             cudaMalloc(&d_A, size * sizeof(float));
