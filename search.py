@@ -114,7 +114,7 @@ def a_star_search(start_state, actions, heuristic):
 
         for action in actions:
             next_state, action_cost = apply_action(current_node.state, action)
-            next_cost = current_node.cost + action_cost  # action.cost
+            next_cost = current_node.cost + action_cost
             next_node = Node(next_state, current_node, action)
 
             if all(node_from_tuple(t) != next_node for t in open_set):
@@ -135,6 +135,8 @@ def heuristic(state):
     if "__global__" in state:
         h_cost -= 10
     if "threadIdx.x" in state:
+        h_cost -= 10
+    if "blockIdx.x" in state:
         h_cost -= 10
     return h_cost
 
@@ -166,6 +168,8 @@ def apply_action(start_state, action):
 
     elif action == "loop_bind":
         axises = get_ajcent_loop(start_state)
+        if len(axises) < 1:
+            return start_state, 100 
         axis = random.choice(axises)
         name = random.choice(["threadIdx.x", "blockIdx.x"])
         if name in start_state:
