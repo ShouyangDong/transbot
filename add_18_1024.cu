@@ -8,10 +8,10 @@ __global__ void add(float *output, float *input1, float *input2)
   if (threadIdx.x < 18)
   {
     {
-      if (blockIdx.x < 128)
+      if (blockIdx.x < 1024)
       {
         {
-          int index = (threadIdx.x * 128) + blockIdx.x;
+          int index = (threadIdx.x * 1024) + blockIdx.x;
           output[index] = input1[index] + input2[index];
         }
       }

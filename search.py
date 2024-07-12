@@ -70,7 +70,7 @@ def compile_check(code):
         cudaMemcpy(d_B, B, size * sizeof(float), cudaMemcpyHostToDevice);
 
         dim3 blockSize(1024);
-        dim3 numBlocks((size + 1024 - 1) / 1024);
+        dim3 numBlocks(256);
 
         add<<<numBlocks, blockSize>>>(d_A, d_B, d_C);
 
@@ -87,11 +87,11 @@ def compile_check(code):
 
     code = macro + code + template_code
 
-    with open("./add_18_128.cu", mode="w") as f:
+    with open("./add_18_1024.cu", mode="w") as f:
         f.write(code)
         f.close()
 
-    success, output = run_compilation("./add_18_128.so", "./add_18_128.cu")
+    success, output = run_compilation("./add_18_1024.so", "./add_18_1024.cu")
     return success
 
 
@@ -112,7 +112,7 @@ def a_star_search(start_state, actions, heuristic):
             cudaMemcpy(d_B, B, size * sizeof(float), cudaMemcpyHostToDevice);
 
             dim3 blockSize(1024);
-            dim3 numBlocks((size + 1024 - 1) / 1024);
+            dim3 numBlocks(256);
 
             add<<<numBlocks, blockSize>>>(d_A, d_B, d_C);
 
@@ -129,12 +129,12 @@ def a_star_search(start_state, actions, heuristic):
 
         code = macro + code + template_code
 
-        with open("./add_18_128.cu", mode="w") as f:
+        with open("./add_18_1024.cu", mode="w") as f:
             f.write(code)
             f.close()
 
-        success, output = run_test("./add_18_128.cu", "./unittest/add_test.py")
-        print("[INFO]******************output2: ", output)
+        success, output = run_test("./add_18_1024.cu", "./unittest/add_test.py")
+        print("[INFO]******************output: ", output)
         return success
 
     open_set = []
@@ -166,9 +166,9 @@ def reconstruct_path(node):
 
 
 def heuristic(state):
-    h_cost = 40
+    h_cost = 400
     if compile_check(state):
-        h_cost -= 20
+        h_cost -= 100
     if "threadIdx.x" in state:
         h_cost -= 10
     if "blockIdx.x" in state:
@@ -231,8 +231,8 @@ if __name__ == "__main__":
     start_state = """
     void add(float* output, float* input1, float* input2) {
         for (int i = 0; i < 18; i++) {
-            for (int j = 0; j < 128; j++) {
-                int index = i * 128 + j;
+            for (int j = 0; j < 1024; j++) {
+                int index = i * 1024 + j;
                 output[index] = input1[index] + input2[index];
             }
         }
