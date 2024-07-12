@@ -46,7 +46,7 @@ class Node(object):
         self.action = action
         self.cost = 0  # 从初始状态到当前状态的代价
         self.heuristic = heuristic(state)  # 当前状态的启发式估计
-        # self.path = [] if parent is None else parent.path + [action]  
+        # self.path = [] if parent is None else parent.path + [action]
 
     @property
     def total_cost(self):
@@ -145,7 +145,11 @@ def a_star_search(start_state, actions, heuristic):
     while open_set:
         current_cost, current_node = heapq.heappop(open_set)
         print("[INFO]***********current state: ", current_node.state)
-        if check_file(current_node.state) and "threadIdx.x" in current_node.state and "blockIdx.x" in current_node.state:
+        if (
+            check_file(current_node.state)
+            and "threadIdx.x" in current_node.state
+            and "blockIdx.x" in current_node.state
+        ):
             return reconstruct_path(current_node)
 
         for action in actions:
@@ -156,6 +160,7 @@ def a_star_search(start_state, actions, heuristic):
             if all(node_from_tuple(t) != next_node for t in open_set):
                 heapq.heappush(open_set, (next_cost + heuristic(next_state), next_node))
     return None
+
 
 def reconstruct_path(node):
     # 从目标节点回溯到起始节点，以构建完整的路径
