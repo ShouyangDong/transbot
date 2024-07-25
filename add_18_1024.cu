@@ -19,7 +19,9 @@ __global__ void add(float *output, float *input1, float *input2)
   }
 }
 
-extern "C" void add_kernel(float *C, float *A, float *B, int size) {
+
+
+        extern "C" void add_kernel(float *C, float *A, float *B, int size) {
             float *d_A, *d_B, *d_C;
 
             cudaMalloc(&d_A, size * sizeof(float));
@@ -33,11 +35,10 @@ extern "C" void add_kernel(float *C, float *A, float *B, int size) {
             dim3 numBlocks(256);
 
             add<<<numBlocks, blockSize>>>(d_C, d_A, d_B);
-
             cudaMemcpy(C, d_C, size * sizeof(float), cudaMemcpyDeviceToHost);
 
             cudaFree(d_A);
             cudaFree(d_B);
             cudaFree(d_C);
-            }
+        }
         

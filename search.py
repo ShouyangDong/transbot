@@ -60,7 +60,8 @@ class Node(object):
 
 
 def compile_check(code):
-    template_code = """extern "C" void add_kernel(float *C, float *A, float *B, int size) {
+    template_code = """\n
+    extern "C" void add_kernel(float *C, float *A, float *B, int size) {
         float *d_A, *d_B, *d_C;
 
         cudaMalloc(&d_A, size * sizeof(float));
@@ -80,7 +81,7 @@ def compile_check(code):
         cudaFree(d_A);
         cudaFree(d_B);
         cudaFree(d_C);
-        }
+    }
     """
     with open("./macro/cuda_macro.txt", "r") as f:
         macro = f.read()
@@ -102,7 +103,8 @@ def a_star_search(start_state, actions, heuristic):
         return node_tuple[1]
 
     def check_file(code):
-        template_code = """extern "C" void add_kernel(float *C, float *A, float *B, int size) {
+        template_code = """\n
+        extern "C" void add_kernel(float *C, float *A, float *B, int size) {
             float *d_A, *d_B, *d_C;
 
             cudaMalloc(&d_A, size * sizeof(float));
@@ -116,13 +118,12 @@ def a_star_search(start_state, actions, heuristic):
             dim3 numBlocks(256);
 
             add<<<numBlocks, blockSize>>>(d_C, d_A, d_B);
-
             cudaMemcpy(C, d_C, size * sizeof(float), cudaMemcpyDeviceToHost);
 
             cudaFree(d_A);
             cudaFree(d_B);
             cudaFree(d_C);
-            }
+        }
         """
         with open("./macro/cuda_macro.txt", "r") as f:
             macro = f.read()
@@ -172,13 +173,22 @@ def reconstruct_path(node):
 
 
 def heuristic(state):
-    h_cost = 400
+    h_cost = 400  # 初始启发式成本
+
+    # 检查代码是否能够编译
     if compile_check(state):
-        h_cost -= 100
-    if "threadIdx.x" in state:
-        h_cost -= 10
-    if "blockIdx.x" in state:
-        h_cost -= 10
+        h_cost -= 100  # 编译通过则减少成本
+    else:
+        h_cost += 50  # 编译失败则增加成本，以避免探索这些状态
+
+    # 检查是否包含正确的线程和块索引
+    if "threadIdx.x" in state and "blockIdx.x" in state:
+        h_cost -= 20  # 正确使用线程和块索引则减少成本
+    else:
+        h_cost += 30  # 错误使用则增加成本
+
+    # 其他启发式逻辑...
+
     return h_cost
 
 
