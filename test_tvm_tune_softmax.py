@@ -89,8 +89,9 @@ def test_transformer_softmax_cuda():
         ),
     )
     print("[INFO]**************space: ", context.generate_design_space()[0].mod)
+    print("[INFO]**************num: ", len(context.generate_design_space()))
 
 
 if __name__ == "__main__":
-    # test_tune_softmax_cuda()
+    test_tune_softmax_cuda()
     test_transformer_softmax_cuda()
