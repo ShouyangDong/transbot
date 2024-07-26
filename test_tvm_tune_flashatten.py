@@ -107,7 +107,10 @@ def testune_flash_atten_cuda():
 
 def test_transform_attention_llvm():
     # rules = ms.ScheduleRule.create("llvm")
-    rules = get_rules(kind="cuda", types=ms.schedule_rule.AutoInline) + [ms.schedule_rule.RandomComputeLocation(), ms.schedule_rule.InlineConstantScalars()]
+    rules = get_rules(kind="llvm", types=ms.schedule_rule.AutoInline) + [
+        ms.schedule_rule.RandomComputeLocation(),
+        ms.schedule_rule.InlineConstantScalars(),
+    ]
     context = ms.TuneContext(
         mod=flash_atten,
         target=Target("llvm --num-cores=16"),
