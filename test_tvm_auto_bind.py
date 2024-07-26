@@ -30,9 +30,26 @@ actual = generate_design_space(
 )
 print("==============================")
 print("[INFO]**********************mod: ", actual[0].mod)
-# check_sketches(
-#     mod,
-#     sketches=actual,
-#     expected_mods=[elementwise_0],
-#     expected_decisions=[decision_0],
-# )
+
+@T.prim_func
+def add(q: T.handle, k: T.handle, o: T.handle) -> None:
+    Q = T.match_buffer(q, [64, 4096, 12, 256])
+    K = T.match_buffer(k, [64, 4096, 12, 256])
+    O = T.match_buffer(o, [64, 4096, 12, 256])
+
+
+    for i, j, m, n in T.grid(64, 4096, 12, 256):
+        with T.block("add"):
+            vi, vj, vm, vn = T.axis.remap("SSSS", [i, j, m, n])
+            O[vi, vj, vm, vn] = Q[vi, vj, vm, vn] + K[vi, vj, vm, vn]
+
+mod = add
+print("[INFO]*********************mod: ", mod)
+actual = generate_design_space(
+    kind="cuda",
+    mod=mod,
+    target=Target("nvidia/nvidia-a100", host="llvm"),
+    types=ms.schedule_rule.AutoBind,
+)
+print("==============================")
+print("[INFO]**********************mod: ", actual[0].mod)
