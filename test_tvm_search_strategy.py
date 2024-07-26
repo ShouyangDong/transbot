@@ -67,7 +67,9 @@ def test_meta_schedule_replay_func(
 
     context = ms.TuneContext(
         mod=Matmul,
-        space_generator=ms.space_generator.ScheduleFn(sch_fn=_schedule_matmul, postprocs=[]),
+        space_generator=ms.space_generator.ScheduleFn(
+            sch_fn=_schedule_matmul, postprocs=[]
+        ),
         search_strategy=TestClass(),
     )
     strategy = context.search_strategy
@@ -78,9 +80,9 @@ def test_meta_schedule_replay_func(
         num_trials_per_iter=num_trials_per_iter,
         design_spaces=spaces,
     )
-    (correct_sch,) = ms.space_generator.ScheduleFn(sch_fn=_schedule_matmul).generate_design_space(
-        Matmul
-    )
+    (correct_sch,) = ms.space_generator.ScheduleFn(
+        sch_fn=_schedule_matmul
+    ).generate_design_space(Matmul)
     num_trials_each_iter: List[int] = []
     candidates = strategy.generate_measure_candidates()
     print("[INFO]**************candidates: ", candidates)
@@ -114,9 +116,9 @@ def test_meta_schedule_evolutionary_search():  # pylint: disable = invalid-name
 
     num_trials_per_iter = 10
     max_trials_per_task = 2000
-    (correct_sch,) = ms.space_generator.ScheduleFn(sch_fn=_schedule_matmul).generate_design_space(
-        Matmul
-    )
+    (correct_sch,) = ms.space_generator.ScheduleFn(
+        sch_fn=_schedule_matmul
+    ).generate_design_space(Matmul)
 
     context = ms.TuneContext(
         mod=Matmul,
@@ -176,9 +178,9 @@ def test_meta_schedule_evolutionary_search_early_stop():  # pylint: disable = in
     def _schedule_matmul_empty(sch: Schedule):
         return sch
 
-    (correct_sch,) = ms.space_generator.ScheduleFn(sch_fn=_schedule_matmul).generate_design_space(
-        Matmul
-    )
+    (correct_sch,) = ms.space_generator.ScheduleFn(
+        sch_fn=_schedule_matmul
+    ).generate_design_space(Matmul)
 
     num_trials_per_iter = 10
     max_trials_per_task = 100

@@ -29,6 +29,7 @@ def matmul(a: T.handle, b: T.handle, c: T.handle) -> None:
                 C[vi, vj] = 0.0
             C[vi, vj] = C[vi, vj] + A[vi, vk] * B[vj, vk]
 
+
 def test_tune_matmul_cuda():
     with tempfile.TemporaryDirectory() as work_dir:
         target = Target("nvidia/nvidia-a100")

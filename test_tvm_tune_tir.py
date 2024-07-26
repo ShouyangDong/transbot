@@ -13,6 +13,7 @@ from tvm.script import tir as T
 from tvm.target import Target
 from tvm.tir.schedule import BlockRV, Schedule
 
+
 @T.prim_func
 def two_step(a: T.handle, c: T.handle) -> None:
     A = T.match_buffer(a, (1024, 1024), "float32")
@@ -35,9 +36,8 @@ def two_step(a: T.handle, c: T.handle) -> None:
             C[vi, vj] = D[vi, vj] + 3.0
 
 
-
 rules = ms.ScheduleRule.create("llvm")
-with tempfile.TemporaryDirectory() as work_dir: 
+with tempfile.TemporaryDirectory() as work_dir:
     target = Target("llvm --num-cores=16")
     database = ms.tir_integration.tune_tir(
         mod=two_step,

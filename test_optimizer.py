@@ -26,12 +26,12 @@ class AnsorOptimizer:
         trials = 0
         while trials < self.trial_budget and self.worklist:
             layer, quota = self.worklist.pop(0)
-            
+
             # 为每一层执行预定数量的试验
             for _ in range(quota):
                 transformation = self.select_transformation(layer)
                 performance = self.evaluate_transformation(transformation)
-                
+
                 # 根据性能反馈更新搜索空间
                 self.update_search_space(transformation, performance)
                 trials += 1
@@ -55,6 +55,7 @@ class AnsorOptimizer:
     def best_transformation(self):
         # 返回最优变换
         pass
+
 
 # 假设有一个深度学习模型和硬件特性定义
 model = ...

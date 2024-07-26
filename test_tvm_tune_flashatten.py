@@ -30,12 +30,15 @@ def flash_atten(q: T.handle, k: T.handle, v: T.handle, o: T.handle) -> None:
             vi, vj, vk, vm, vn = T.axis.remap("SSSSR", [i, j, k, m, n])
             with T.init():
                 S[vi, vj, vk, vm] = 0.0
-            S[vi, vj, vk, vm] = O[vi, vj, vk, vm] + Q[vi, vj, vk, vn] * K[vi, vj, vm, vn]
+            S[vi, vj, vk, vm] = (
+                O[vi, vj, vk, vm] + Q[vi, vj, vk, vn] * K[vi, vj, vm, vn]
+            )
 
     for i, j, m, n in T.grid(64, 4096, 12, 12):
         with T.block("norm"):
             vi, vj, vm, vn = T.axis.remap("SSSS", [i, j, m, n])
             O[vi, vj, vm, vn] = S[vi, vj, vm, vn] / 256
+
 
 def test_tune_flash_atten_cuda():
     with tempfile.TemporaryDirectory() as work_dir:

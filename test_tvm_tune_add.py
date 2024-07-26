@@ -17,6 +17,7 @@ from tvm.tir.schedule import BlockRV, Schedule
 logging.basicConfig()
 logging.getLogger("tvm.meta_schedule").setLevel(logging.DEBUG)
 
+
 @tvm.script.ir_module
 class Add:
     @T.prim_func
@@ -25,15 +26,15 @@ class Add:
         K = T.match_buffer(k, [64, 4096, 12, 256])
         O = T.match_buffer(o, [64, 4096, 12, 256])
 
-
         for i, j, m, n in T.grid(64, 4096, 12, 256):
             with T.block("add"):
                 vi, vj, vm, vn = T.axis.remap("SSSS", [i, j, m, n])
                 O[vi, vj, vm, vn] = Q[vi, vj, vm, vn] + K[vi, vj, vm, vn]
 
+
 def test_tune_add_cuda():
     rules = ms.ScheduleRule.create("cuda")
-    with tempfile.TemporaryDirectory() as work_dir: 
+    with tempfile.TemporaryDirectory() as work_dir:
         target = Target("nvidia/nvidia-a100")
         database = ms.tir_integration.tune_tir(
             mod=add,
@@ -52,6 +53,7 @@ def test_tune_add_cuda():
         sch.mod.show()
         sch.trace.show()
 
+
 def test_simple_bind():
     rules = ms.ScheduleRule.create("cuda")
     context = ms.TuneContext(
@@ -65,6 +67,7 @@ def test_simple_bind():
         ),
     )
     print("[INFO]**************space: ", context.generate_design_space()[0].mod)
+
 
 if __name__ == """__main__""":
     test_tune_add_cuda()
