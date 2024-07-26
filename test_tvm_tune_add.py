@@ -7,6 +7,7 @@ import pytest
 import tvm
 import tvm.testing
 from tvm import meta_schedule as ms
+from tvm.meta_schedule.schedule_rule import ApplyCustomRule
 from tvm.meta_schedule.testing.custom_builder_runner import run_module_via_rpc
 from tvm.meta_schedule.testing.local_rpc import LocalRPC
 from tvm.script import tir as T
@@ -30,69 +31,41 @@ class Add:
                 vi, vj, vm, vn = T.axis.remap("SSSS", [i, j, m, n])
                 O[vi, vj, vm, vn] = Q[vi, vj, vm, vn] + K[vi, vj, vm, vn]
 
-# def test_tune_add_cuda():
-#     rules = ms.ScheduleRule.create("cuda")
-#     with tempfile.TemporaryDirectory() as work_dir: 
-#         target = Target("nvidia/nvidia-a100")
-#         database = ms.tir_integration.tune_tir(
-#             mod=add,
-#             target=target,
-#             work_dir=work_dir,
-#             max_trials_global=32,
-#             num_trials_per_iter=16,
-#             space=ms.space_generator.PostOrderApply(
-#                 sch_rules=rules,
-#                 postprocs=[],
-#                 mutator_probs={},
-#             ),
-#         )
-#         sch = ms.tir_integration.compile_tir(database, add, target)
-#         assert sch is not None
-#         sch.mod.show()
-#         sch.trace.show()
-
-def test_simple_bind():
+def test_tune_add_cuda():
     rules = ms.ScheduleRule.create("cuda")
     with tempfile.TemporaryDirectory() as work_dir: 
-        target = Target("nvidia/nvidia-a100", host="llvm")
+        target = Target("nvidia/nvidia-a100")
         database = ms.tir_integration.tune_tir(
-            mod=Add,
+            mod=add,
             target=target,
             work_dir=work_dir,
             max_trials_global=32,
             num_trials_per_iter=16,
             space=ms.space_generator.PostOrderApply(
-                sch_rules=[ms.schedule_rule.AutoBind()],
+                sch_rules=rules,
                 postprocs=[],
                 mutator_probs={},
             ),
         )
-        sch = ms.tir_integration.compile_tir(database, Add, target)
+        sch = ms.tir_integration.compile_tir(database, add, target)
         assert sch is not None
         sch.mod.show()
         sch.trace.show()
 
+def test_simple_bind():
+    rules = ms.ScheduleRule.create("cuda")
+    context = ms.TuneContext(
+        mod=mod,
+        target=Target("nvidia/nvidia-a100", host="llvm"),
+        task_name="Double Rules Task",
+        space_generator=ms.space_generator.PostOrderApply(
+            sch_rules=rules,
+            postprocs=[],
+            mutator_probs={},
+        ),
+    )
+    print("[INFO]**************space: ", context.generate_design_space()[0].mod)
+
 if __name__ == """__main__""":
-    # test_tune_add_cuda()
+    test_tune_add_cuda()
     test_simple_bind()
-    # mod = Add
-    # context = ms.TuneContext(
-    #     mod=mod,
-    #     target=Target("nvidia/nvidia-a100", host="llvm"),
-    #     task_name="Double Rules Task",
-    #     space_generator=ms.space_generator.PostOrderApply(
-    #         sch_rules=[ms.schedule_rule.AutoBind()],
-    #         postprocs=[],
-    #         mutator_probs={},
-    #     ),
-    # )
-    # post_order_apply = context.space_generator
-    # schs = post_order_apply.generate_design_space(mod)
-    # # space=ms.space_generator.PostOrderApply(
-    # #     sch_rules=[ms.schedule_rule.AutoBind()],
-    # #     postprocs=[],
-    # #     mutator_probs={},
-    # # )
-    # for sch in schs:
-    #     sch.mod.show()
-    #     sch.trace.show()
