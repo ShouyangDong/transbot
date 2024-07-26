@@ -7,11 +7,12 @@ import pytest
 import tvm
 import tvm.testing
 from tvm import meta_schedule as ms
-from tvm.meta_schedule.testing.custom_builder_runner import run_module_via_rpc
-from tvm.meta_schedule.testing.local_rpc import LocalRPC
+
+
 from tvm.script import tir as T
 from tvm.target import Target
 from tvm.tir.schedule import BlockRV, Schedule
+from tvm.meta_schedule.testing.space_generation import get_rules
 
 logging.basicConfig()
 logging.getLogger("tvm.meta_schedule").setLevel(logging.DEBUG)
@@ -105,7 +106,8 @@ def testune_flash_atten_cuda():
 
 
 def test_transform_attention_llvm():
-    rules = ms.ScheduleRule.create("llvm")
+    # rules = ms.ScheduleRule.create("llvm")
+    rules = get_rules(kind="cuda", types=ms.schedule_rule.AutoInline) + [ms.schedule_rule.RandomComputeLocation(), ms.schedule_rule.InlineConstantScalars()]
     context = ms.TuneContext(
         mod=flash_atten,
         target=Target("llvm --num-cores=16"),
