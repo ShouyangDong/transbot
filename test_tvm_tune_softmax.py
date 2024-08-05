@@ -75,9 +75,11 @@ def test_tune_softmax_cuda():
         sch.mod.show()
         sch.trace.show()
 
+
 def ref_program(x):
     e_x = np.exp(x - np.max(x, axis=-1, keepdims=True))
     return e_x / np.sum(e_x, axis=-1, keepdims=True)
+
 
 def test_transformer_softmax_cuda():
     rules = ms.ScheduleRule.create("cuda")
@@ -104,6 +106,7 @@ def test_transformer_softmax_cuda():
         myfunc = tvm.build(mod, target="cuda", name="softmax")
         myfunc(buff_a, buff_c)
         tvm.testing.assert_allclose(buff_c.numpy(), c_np, rtol=1e-3)
+
 
 if __name__ == "__main__":
     # test_tune_softmax_cuda()

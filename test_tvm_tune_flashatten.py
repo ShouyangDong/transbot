@@ -87,22 +87,20 @@ def flash_atten(q: T.handle, k: T.handle, v: T.handle, o: T.handle) -> None:
             )
 
 
-def testune_flash_atten_cuda():
-    with tempfile.TemporaryDirectory() as work_dir:
-        target = Target("nvidia/nvidia-a100")
-        database = ms.tir_integration.tune_tir(
-            mod=flash_atten,
-            target=target,
-            work_dir=work_dir,
-            max_trials_global=32,
-            num_trials_per_iter=16,
-        )
-        sch = ms.tir_integration.compile_tir(database, flash_atten, target)
-        if sch is None:
-            print("No valid schedule found!")
-        else:
-            sch.mod.show()
-            sch.trace.show()
+def test_flash_atten_cuda():
+    rules = ms.ScheduleRule.create("cuda")
+    context = ms.TuneContext(
+        mod=flash_atten,
+        target=Target("nvidia/nvidia-a100", host="llvm"),
+        task_name="Double Rules Task",
+        space_generator=ms.space_generator.PostOrderApply(
+            sch_rules=rules,
+            postprocs=[],
+            mutator_probs={},
+        ),
+    )
+    print("[INFO]**************space: ", context.generate_design_space()[0].mod)
+    print("[INFO]**************num: ", len(context.generate_design_space()))
 
 
 def test_transform_attention_llvm():
@@ -127,5 +125,5 @@ def test_transform_attention_llvm():
 
 
 if __name__ == """__main__""":
-    # testune_flash_atten_cuda()
-    test_transform_attention_llvm()
+    test_flash_atten_cuda()
+    # test_transform_attention_llvm()

@@ -55,3 +55,12 @@ with tempfile.TemporaryDirectory() as work_dir:
     assert sch is not None
     sch.mod.show()
     sch.trace.show()
+
+    dev = tvm.cpu(0)
+    a_np = np.random.uniform(size=(1024, 1024)).astype("float32")
+    c_np = a_np * 2 + 6
+    buff_a = tvm.nd.array(a_np, dev)
+    buff_c = tvm.nd.array(np.zeros((1024, 1024), dtype="float32"), dev)
+    myfunc = tvm.build(sch.mod, target="llvm", name="add")
+    myfunc(buff_a, buff_c)
+    tvm.testing.assert_allclose(buff_c.numpy(), c_np, rtol=1e-3)
