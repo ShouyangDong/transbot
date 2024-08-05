@@ -8,54 +8,134 @@ import tvm
 import tvm.testing
 from tvm import meta_schedule as ms
 from tvm.meta_schedule.schedule_rule import ApplyCustomRule
+
+
 from tvm.script import tir as T
 from tvm.target import Target
 from tvm.tir.schedule import BlockRV, Schedule
 
 logging.basicConfig()
 logging.getLogger("tvm.meta_schedule").setLevel(logging.DEBUG)
-extern "C" void layernorm_kernel(float* input,   // shape=[1, 4, 128]
-                                  float* gamma,   // shape=[128]
-                                  float* beta,    // shape=[128]
-                                  float* output)  // shape=[1, 4, 128]
-{
-  for (int i_seq = 0; i_seq < 4; i_seq++) {
-    float mean = 0.0;
-    float variance = 0.0;
-    float diff[128];
-    // Calculate mean
-    for (int i_mean = 0; i_mean < 128; i_mean++) {
-      mean += input[i_seq * 128 + i_mean];
-    }
-    mean /= 128;
-    // Calculate variance
-    for (int i_diff = 0; i_diff < 128; i_diff++) {
-      diff[i_diff] = input[i_seq * 128 + i_diff] - mean;
-    }
 
-    for (int i_pow = 0; i_pow < 128; i_pow++) {
-      diff[i_pow] = diff[i_pow] * diff[i_pow];
-    }
-    for (int i_var = 0; i_var < 128; i_var++) {
-      variance += diff[i_var];
-    }
-    variance = sqrt(variance / 128);
 
-    // Normalize input
-    for (int i_norm = 0; i_norm < 128; i_norm++) {
-      diff[i_norm] = (input[i_seq * 128 + i_norm] - mean);
-    }
+@T.prim_func
+def layernorm(input: T.handle, gamma: T.handle, beta: T.handle, output: T.handle) -> None:
+    input_ = T.match_buffer(input, [64, 4, 128], dtype="float32")
+    gamma_ = T.match_buffer(gamma, [128], dtype="float32")
+    beta_ = T.match_buffer(beta, [128], dtype="float32")
+    output_ = T.match_buffer(output, [64, 4, 128], dtype="float32")
+    input_sum = T.alloc_buffer([64, 4], dtype="float32")
+    input_mean = T.alloc_buffer([64, 4], dtype="float32")
 
-    for (int i_mul = 0; i_mul < 128; i_mul++) {
-      diff[i_mul] = diff[i_mul] * gamma[i_mul];
-    }
+    for ib, ir, ip in T.grid(64, 4, 128):
+        with T.block("input_sum"):
+            ib_0, ir_0, ip_0 = T.axis.remap("SSR", [ib, ir, ip])
+            with T.init():
+                input_sum[ib_0, ir_0] = T.float32(0)
 
-    for (int i_div = 0; i_div < 128; i_div++) {
-      diff[i_div] = diff[i_div] / (variance + 1e-5f);
-    }
+            input_sum[ib_0, ir_0] = input_sum[ib_0, ir_0] + input[ib_0, ir_0, ip_0]
 
-    for (int i_bet = 0; i_bet < 128; i_bet++) {
-      output[i_seq * 128 + i_bet] = diff[i_bet] + beta[i_bet];
-    }
-  }
-}
+
+    for ib, ir in T.grid(64, 4):
+        with T.block("input_norm"):
+            ib_0, ir_0 = T.axis.remap("SS", [ib, ir])
+
+            input_mean[ib_0, ir_0] = input_sum[ib_0, ir_0] / T.float32(128)
+
+    input_diff = T.alloc_buffer([64, 4, 128])
+    for ib, ir, ip in T.grid(64, 4, 128):
+        with T.block("input_diff"):
+            ib_0, ir_0, ip_0 = T.axis.remap("SS", [ib, ir])
+            input_diff[ib_0, ir_0, ip_0] = input[ib_0, ir_0, ip_0] - input_mean[ib_0, ir_0]
+
+    input_variance = T.alloc_buffer([64, 4], dtype="float32")
+
+    for ib, ir, ip  in T.grid(64, 4, 128):
+        with T.block("input_variance"):
+            ib_0, ir_0, ip_0 = T.axis.remap("SSR", [ib, ir, ip])
+
+            with T.init():
+                input_variance[ib_0, ir_0] = T.float32(0)
+
+            input_variance[ib_0, ir_0] = input_variance[ib_0, ir_0] + input_diff[ib_0, ir_0, ip_0]
+
+
+    variance_norm = T.alloc_buffer([64, 4], dtype="float32")
+    for ib, ir in T.grid(64, 4):
+        with T.block("variance_norm"):
+            ib_0, ir_0 = T.axis.remap("SS", [ib, ir])
+            variance_norm[ib_0, ir_0] = input_variance[ib_0, ir_0] / 128
+
+
+    variance_sqrt = T.alloc_buffer([64, 4], dtype="float32")
+    for ib, ir in T.grid(64, 4):
+        with T.block("variance_sqrt"):
+            ib_0, ir_0 = T.axis.remap("SS", [ib, ir])
+            variance_sqrt[ib_0, ir_0] = T.sqrt(variance_norm[ib_0, ir_0])
+
+
+    diff_input = T.alloc_buffer([64, 4, 128], dtype="float32")
+    for ib, ir, ip  in T.grid(64, 4, 128):
+        with T.block("diff_input"):
+            ib_0, ir_0, ip_0 = T.axis.remap("SSS", [ib, ir, ip])
+            diff_input[ib_0, ir_0, ip_0] = input[ib_0, ir_0, ip_0] - input_mean[ib_0, ir_0]
+
+    diff_gamma = T.alloc_buffer([64, 4, 128], dtype="float32")
+    for ib, ir, ip  in T.grid(64, 4, 128):
+        with T.block("diff_gamma"):
+            ib_0, ir_0, ip_0 = T.axis.remap("SSS", [ib, ir, ip])
+            diff_gamma[ib_0, ir_0, ip_0] = input_diff[ib_0, ir_0, ip_0] * gamma[ip_0]
+
+
+    diff_div = T.alloc_buffer([64, 4, 128], dtype="float32")
+    for ib, ir, ip  in T.grid(64, 4, 128):
+        with T.block("diff_div"):
+            ib_0, ir_0, ip_0 = T.axis.remap("SSS", [ib, ir, ip])
+            diff_div[ib_0, ir_0, ip_0] = diff_gamma[ib_0, ir_0, ip_0] / (variance_sqrt[ib_0, ir_0] + T.float32(1e-5))
+
+    for ib, ir, ip  in T.grid(64, 4, 128):
+        with T.block("output"):
+            ib_0, ir_0, ip_0 = T.axis.remap("SSS", [ib, ir, ip])
+            output[ib_0, ir_0, ip_0] = diff_div[ib_0, ir_0, ip_0] + beta[ip_0]
+
+
+def test_flash_atten_cuda():
+    rules = ms.ScheduleRule.create("cuda")
+    context = ms.TuneContext(
+        mod=flash_atten,
+        target=Target("nvidia/nvidia-a100", host="llvm"),
+        task_name="Double Rules Task",
+        space_generator=ms.space_generator.PostOrderApply(
+            sch_rules=rules,
+            postprocs=[],
+            mutator_probs={},
+        ),
+    )
+    print("[INFO]**************space: ", context.generate_design_space()[0].mod)
+    print("[INFO]**************num: ", len(context.generate_design_space()))
+
+
+def test_transform_attention_llvm():
+    # rules = ms.ScheduleRule.create("llvm")
+    rules = get_rules(kind="llvm", types=ms.schedule_rule.AutoInline) + [
+        ms.schedule_rule.RandomComputeLocation(),
+        ms.schedule_rule.InlineConstantScalars(),
+    ]
+    context = ms.TuneContext(
+        mod=flash_atten,
+        target=Target("llvm --num-cores=16"),
+        task_name="Double Rules Task",
+        space_generator=ms.space_generator.PostOrderApply(
+            sch_rules=rules,
+            postprocs=[],
+            mutator_probs={},
+        ),
+    )
+
+    print("[INFO]**************space: ", context.generate_design_space()[0].mod)
+    print("[INFO]**************num: ", len(context.generate_design_space()))
+
+
+if __name__ == """__main__""":
+    test_flash_atten_cuda()
+    test_flash_atten_llvm()
