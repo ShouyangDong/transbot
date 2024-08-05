@@ -1,9 +1,7 @@
 import tvm
 from tvm import meta_schedule as ms
-from tvm.meta_schedule.testing.space_generation import (
-    check_sketches,
-    generate_design_space,
-)
+from tvm.meta_schedule.testing.space_generation import (check_sketches,
+                                                        generate_design_space)
 from tvm.script import tir as T
 from tvm.target import Target
 

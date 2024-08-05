@@ -1,11 +1,12 @@
 from typing import List
 
 import pytest
+
 import tvm
 import tvm.testing
 from tvm import meta_schedule as ms
-from tvm.meta_schedule.utils import derived_object
 from tvm.meta_schedule.testing.dummy_object import DummyMutator
+from tvm.meta_schedule.utils import derived_object
 from tvm.script import tir as T
 from tvm.tir.schedule import Schedule, Trace
 

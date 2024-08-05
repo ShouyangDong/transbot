@@ -1,11 +1,9 @@
 from tvm import meta_schedule as ms
 from tvm import te
 from tvm.ir import assert_structural_equal
-from tvm.meta_schedule.testing.space_generation import (
-    check_sketches,
-    generate_design_space,
-    print_sketches,
-)
+from tvm.meta_schedule.testing.space_generation import (check_sketches,
+                                                        generate_design_space,
+                                                        print_sketches)
 from tvm.script import tir as T
 from tvm.target import Target
 from tvm.tir.tensor_intrin.arm_cpu import DP4A_S8S8S32_INTRIN

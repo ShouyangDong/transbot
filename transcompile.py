@@ -1,8 +1,10 @@
 import os
-import numpy as np
 import random
-from transformation import get_LLM_answers
+
+import numpy as np
+
 from reward import reward_function
+from transformation import get_LLM_answers
 
 
 class SophisticatedQLearningAgent:

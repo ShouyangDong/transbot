@@ -1,7 +1,8 @@
 import heapq
 import random
 import subprocess
-from ast_transformation import loop_bind, loop_split, loop_fuse
+
+from ast_transformation import loop_bind, loop_fuse, loop_split
 from ast_visitor import get_ajcent_loop
 
 

@@ -1,18 +1,15 @@
-import os
-import autogen
-from autogen import (
-    config_list_from_json,
-    UserProxyAgent,
-    AssistantAgent,
-    GroupChatManager,
-    GroupChat,
-)
-import numpy as np
-import random
 import logging
-import threading
+import os
+import random
 import sys
+import threading
 import time
+
+import numpy as np
+
+import autogen
+from autogen import (AssistantAgent, GroupChat, GroupChatManager,
+                     UserProxyAgent, config_list_from_json)
 
 # Determine the directory of the script
 script_directory = os.path.dirname(os.path.abspath(__file__))
