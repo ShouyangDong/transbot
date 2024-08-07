@@ -8,8 +8,6 @@ import tvm
 import tvm.testing
 from tvm import meta_schedule as ms
 from tvm.meta_schedule.schedule_rule import ApplyCustomRule
-
-
 from tvm.script import tir as T
 from tvm.target import Target
 from tvm.tir.schedule import BlockRV, Schedule
@@ -19,7 +17,9 @@ logging.getLogger("tvm.meta_schedule").setLevel(logging.DEBUG)
 
 
 @T.prim_func
-def layernorm(input: T.handle, gamma: T.handle, beta: T.handle, output: T.handle) -> None:
+def layernorm(
+    input: T.handle, gamma: T.handle, beta: T.handle, output: T.handle
+) -> None:
     input_ = T.match_buffer(input, [64, 4, 128], dtype="float32")
     gamma_ = T.match_buffer(gamma, [128], dtype="float32")
     beta_ = T.match_buffer(beta, [128], dtype="float32")
@@ -35,7 +35,6 @@ def layernorm(input: T.handle, gamma: T.handle, beta: T.handle, output: T.handle
 
             input_sum[ib_0, ir_0] = input_sum[ib_0, ir_0] + input[ib_0, ir_0, ip_0]
 
-
     for ib, ir in T.grid(64, 4):
         with T.block("input_norm"):
             ib_0, ir_0 = T.axis.remap("SS", [ib, ir])
@@ -46,19 +45,22 @@ def layernorm(input: T.handle, gamma: T.handle, beta: T.handle, output: T.handle
     for ib, ir, ip in T.grid(64, 4, 128):
         with T.block("input_diff"):
             ib_0, ir_0, ip_0 = T.axis.remap("SS", [ib, ir])
-            input_diff[ib_0, ir_0, ip_0] = input[ib_0, ir_0, ip_0] - input_mean[ib_0, ir_0]
+            input_diff[ib_0, ir_0, ip_0] = (
+                input[ib_0, ir_0, ip_0] - input_mean[ib_0, ir_0]
+            )
 
     input_variance = T.alloc_buffer([64, 4], dtype="float32")
 
-    for ib, ir, ip  in T.grid(64, 4, 128):
+    for ib, ir, ip in T.grid(64, 4, 128):
         with T.block("input_variance"):
             ib_0, ir_0, ip_0 = T.axis.remap("SSR", [ib, ir, ip])
 
             with T.init():
                 input_variance[ib_0, ir_0] = T.float32(0)
 
-            input_variance[ib_0, ir_0] = input_variance[ib_0, ir_0] + input_diff[ib_0, ir_0, ip_0]
-
+            input_variance[ib_0, ir_0] = (
+                input_variance[ib_0, ir_0] + input_diff[ib_0, ir_0, ip_0]
+            )
 
     variance_norm = T.alloc_buffer([64, 4], dtype="float32")
     for ib, ir in T.grid(64, 4):
@@ -66,34 +68,35 @@ def layernorm(input: T.handle, gamma: T.handle, beta: T.handle, output: T.handle
             ib_0, ir_0 = T.axis.remap("SS", [ib, ir])
             variance_norm[ib_0, ir_0] = input_variance[ib_0, ir_0] / 128
 
-
     variance_sqrt = T.alloc_buffer([64, 4], dtype="float32")
     for ib, ir in T.grid(64, 4):
         with T.block("variance_sqrt"):
             ib_0, ir_0 = T.axis.remap("SS", [ib, ir])
             variance_sqrt[ib_0, ir_0] = T.sqrt(variance_norm[ib_0, ir_0])
 
-
     diff_input = T.alloc_buffer([64, 4, 128], dtype="float32")
-    for ib, ir, ip  in T.grid(64, 4, 128):
+    for ib, ir, ip in T.grid(64, 4, 128):
         with T.block("diff_input"):
             ib_0, ir_0, ip_0 = T.axis.remap("SSS", [ib, ir, ip])
-            diff_input[ib_0, ir_0, ip_0] = input[ib_0, ir_0, ip_0] - input_mean[ib_0, ir_0]
+            diff_input[ib_0, ir_0, ip_0] = (
+                input[ib_0, ir_0, ip_0] - input_mean[ib_0, ir_0]
+            )
 
     diff_gamma = T.alloc_buffer([64, 4, 128], dtype="float32")
-    for ib, ir, ip  in T.grid(64, 4, 128):
+    for ib, ir, ip in T.grid(64, 4, 128):
         with T.block("diff_gamma"):
             ib_0, ir_0, ip_0 = T.axis.remap("SSS", [ib, ir, ip])
             diff_gamma[ib_0, ir_0, ip_0] = input_diff[ib_0, ir_0, ip_0] * gamma[ip_0]
 
-
     diff_div = T.alloc_buffer([64, 4, 128], dtype="float32")
-    for ib, ir, ip  in T.grid(64, 4, 128):
+    for ib, ir, ip in T.grid(64, 4, 128):
         with T.block("diff_div"):
             ib_0, ir_0, ip_0 = T.axis.remap("SSS", [ib, ir, ip])
-            diff_div[ib_0, ir_0, ip_0] = diff_gamma[ib_0, ir_0, ip_0] / (variance_sqrt[ib_0, ir_0] + T.float32(1e-5))
+            diff_div[ib_0, ir_0, ip_0] = diff_gamma[ib_0, ir_0, ip_0] / (
+                variance_sqrt[ib_0, ir_0] + T.float32(1e-5)
+            )
 
-    for ib, ir, ip  in T.grid(64, 4, 128):
+    for ib, ir, ip in T.grid(64, 4, 128):
         with T.block("output"):
             ib_0, ir_0, ip_0 = T.axis.remap("SSS", [ib, ir, ip])
             output[ib_0, ir_0, ip_0] = diff_div[ib_0, ir_0, ip_0] + beta[ip_0]

@@ -8,8 +8,13 @@ import time
 import numpy as np
 
 import autogen
-from autogen import (AssistantAgent, GroupChat, GroupChatManager,
-                     UserProxyAgent, config_list_from_json)
+from autogen import (
+    AssistantAgent,
+    GroupChat,
+    GroupChatManager,
+    UserProxyAgent,
+    config_list_from_json,
+)
 
 # Determine the directory of the script
 script_directory = os.path.dirname(os.path.abspath(__file__))
