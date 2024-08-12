@@ -18,8 +18,8 @@ def layernorm(
     gamma_ = T.match_buffer(gamma, [4096], dtype="float32")
     beta_ = T.match_buffer(beta, [4096], dtype="float32")
     output_ = T.match_buffer(output, [64, 100, 4096], dtype="float32")
-    input_sum = T.alloc_buffer([64, 4], dtype="float32")
-    input_mean = T.alloc_buffer([64, 4], dtype="float32")
+    input_sum = T.alloc_buffer([64, 100], dtype="float32")
+    input_mean = T.alloc_buffer([64, 100], dtype="float32")
 
     for ib, ir, ip in T.grid(64, 100, 4096):
         with T.block("input_sum"):
@@ -29,7 +29,7 @@ def layernorm(
 
             input_sum[ib_0, ir_0] = input_sum[ib_0, ir_0] + input_[ib_0, ir_0, ip_0]
 
-    for ib, ir in T.grid(64, 4):
+    for ib, ir in T.grid(64, 100):
         with T.block("input_norm"):
             ib_0, ir_0 = T.axis.remap("SS", [ib, ir])
 
@@ -43,7 +43,7 @@ def layernorm(
                 input_[ib_0, ir_0, ip_0] - input_mean[ib_0, ir_0]
             )
 
-    input_variance = T.alloc_buffer([64, 4], dtype="float32")
+    input_variance = T.alloc_buffer([64, 100], dtype="float32")
 
     for ib, ir, ip in T.grid(64, 100, 4096):
         with T.block("input_variance"):
@@ -56,14 +56,14 @@ def layernorm(
                 input_variance[ib_0, ir_0] + input_diff[ib_0, ir_0, ip_0]
             )
 
-    variance_norm = T.alloc_buffer([64, 4], dtype="float32")
-    for ib, ir in T.grid(64, 4):
+    variance_norm = T.alloc_buffer([64, 100], dtype="float32")
+    for ib, ir in T.grid(64, 100):
         with T.block("variance_norm"):
             ib_0, ir_0 = T.axis.remap("SS", [ib, ir])
             variance_norm[ib_0, ir_0] = input_variance[ib_0, ir_0] / 4096
 
-    variance_sqrt = T.alloc_buffer([64, 4], dtype="float32")
-    for ib, ir in T.grid(64, 4):
+    variance_sqrt = T.alloc_buffer([64, 100], dtype="float32")
+    for ib, ir in T.grid(64, 100):
         with T.block("variance_sqrt"):
             ib_0, ir_0 = T.axis.remap("SS", [ib, ir])
             variance_sqrt[ib_0, ir_0] = T.sqrt(variance_norm[ib_0, ir_0])
