@@ -1,10 +1,7 @@
 import logging
 import tempfile
 
-import numpy as np
 
-import tvm
-import tvm.testing
 from tvm import meta_schedule as ms
 from tvm.script import tir as T
 from tvm.target import Target
@@ -135,6 +132,7 @@ def test_tune_layernorm_cuda():
         assert sch is not None
         sch.mod.show()
         sch.trace.show()
+
 
 def test_layernorm_llvm():
     # rules = ms.ScheduleRule.create("llvm")

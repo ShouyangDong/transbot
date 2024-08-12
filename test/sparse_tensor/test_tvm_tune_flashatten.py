@@ -1,8 +1,8 @@
 import logging
+import tempfile
 
 
 from tvm import meta_schedule as ms
-from tvm.meta_schedule.testing.space_generation import get_rules
 from tvm.script import tir as T
 from tvm.target import Target
 
@@ -95,6 +95,28 @@ def test_flash_atten_cuda():
     print("[INFO]**************num: ", len(context.generate_design_space()))
 
 
+def test_tune_flash_atten_cuda():
+    rules = ms.ScheduleRule.create("cuda")
+    with tempfile.TemporaryDirectory() as work_dir:
+        target = Target("nvidia/nvidia-a100")
+        database = ms.tir_integration.tune_tir(
+            mod=flash_atten,
+            target=target,
+            work_dir=work_dir,
+            max_trials_global=32,
+            num_trials_per_iter=16,
+            space=ms.space_generator.PostOrderApply(
+                sch_rules=rules,
+                postprocs=[],
+                mutator_probs={},
+            ),
+        )
+        sch = ms.tir_integration.compile_tir(database, flash_atten, target)
+        assert sch is not None
+        sch.mod.show()
+        sch.trace.show()
+
+
 def test_transform_attention_llvm():
     # rules = ms.ScheduleRule.create("llvm")
     rules = get_rules(kind="llvm", types=ms.schedule_rule.AutoInline) + [
@@ -117,5 +139,6 @@ def test_transform_attention_llvm():
 
 
 if __name__ == """__main__""":
-    test_flash_atten_cuda()
+    # test_flash_atten_cuda()
     # test_transform_attention_llvm()
+    test_tune_flash_atten_cuda()
