@@ -1,8 +1,10 @@
 import tempfile
 
 import numpy as np
+import torch
 
 import tvm
+import timeit
 import tvm.testing
 from tvm import meta_schedule as ms
 from tvm.script import tir as T
@@ -50,6 +52,22 @@ def test_sddmm_cuda():
         myfunc = tvm.build(sch.mod, target="cuda", name="sddmm")
         myfunc(buff_a, buff_b, buff_c)
         tvm.testing.assert_allclose(buff_c.numpy(), c_np, rtol=1e-3)
+        # Evaluate execution time.
+        evaluator = myfunc.time_evaluator(myfunc.entry_name, dev, min_repeat_ms=500)
+        mean_time = np.median(evaluator(buff_a, buff_b, buff_c).results)
+        print("Execution time of this operator: %.3f ms" % (mean_time * 1000))
+
+        tensor_a = torch.randn(512, 512).to(torch.float32).cuda()
+        tensor_b = torch.randn(512, 512).to(torch.float32).cuda()
+
+        def f():
+            result = torch.matmul(tensor_a, tensor_b)
+            # necessary because kernel launches are async
+            torch.cuda.synchronize()
+
+        time_ms = timeit.timeit(f, number=100) / 100 * 1000
+        print(f"Handwritten CUDA: {time_ms:.3f}ms")
+        print(f"Speedup: {time_ms/(mean_time*1000):.2f}x")
 
 
 def test_transform_attention_llvm():
