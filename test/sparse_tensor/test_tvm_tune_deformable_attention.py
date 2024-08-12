@@ -22,15 +22,15 @@ def deformable_attention(
     output_ = T.match_buffer(output, [8, 100, 8 * 256], dtype="float32")
 
     # These are temporaries used to store information
-    value_offset = T.alloc_buffer([1], dtype="int32", scope="local")
-    attention_sum = T.alloc_buffer([1], dtype="float32", scope="local")
-    height_width = T.alloc_buffer([2], dtype="int32", scope="local")
-    xy = T.alloc_buffer([2], dtype="float32", scope="local")
-    xy_grid = T.alloc_buffer([2], dtype="float32", scope="local")
+    value_offset = T.alloc_buffer([1], dtype="int32")
+    attention_sum = T.alloc_buffer([1], dtype="float32")
+    height_width = T.alloc_buffer([2], dtype="int32")
+    xy = T.alloc_buffer([2], dtype="float32")
+    xy_grid = T.alloc_buffer([2], dtype="float32")
     xy_rounded = T.alloc_buffer(
-        [2, 2], dtype="int32", scope="local"
+        [2, 2], dtype="int32"
     )  # First dim is x,y second is floor, ceil
-    corner_values = T.alloc_buffer([2, 2], dtype="float32", scope="local")
+    corner_values = T.alloc_buffer([2, 2], dtype="float32")
 
     for batch in range(8):
         for i_m in range(8):
