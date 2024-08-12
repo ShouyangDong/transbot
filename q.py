@@ -7,7 +7,6 @@ import time
 
 import numpy as np
 
-import autogen
 from autogen import (
     AssistantAgent,
     GroupChat,

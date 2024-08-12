@@ -10,7 +10,7 @@ from tvm.target import Target
 
 
 @T.prim_func
-def sddmm(a:T.handle, b: T.handle, c: T.handle) -> None:
+def sddmm(a: T.handle, b: T.handle, c: T.handle) -> None:
     A = T.match_buffer(a, [512, 512], "float32")
     B = T.match_buffer(b, [512, 512], "float32")
     C = T.match_buffer(c, [512, 512], "float32")
@@ -20,7 +20,8 @@ def sddmm(a:T.handle, b: T.handle, c: T.handle) -> None:
             vi, vj, vk = T.axis.remap("SSR", [i, j, k])
             with T.init():
                 C[vi, vj] = 0.0
-            C[vi, vj] = C[vi, vj] + A[vi, vk] * B [vk, vj]
+            C[vi, vj] = C[vi, vj] + A[vi, vk] * B[vk, vj]
+
 
 def test_sddmm_cuda():
     with tempfile.TemporaryDirectory() as work_dir:
@@ -38,7 +39,6 @@ def test_sddmm_cuda():
         else:
             sch.mod.show()
             sch.trace.show()
-
 
         dev = tvm.device("cuda", 0)
         a_np = np.random.uniform(size=(512, 512)).astype("float32")

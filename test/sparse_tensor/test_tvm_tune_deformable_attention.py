@@ -1,16 +1,6 @@
-import logging
-import tempfile
-
-import numpy as np
-import pytest
-
-import tvm
-import tvm.testing
 from tvm import meta_schedule as ms
-from tvm.meta_schedule.testing.space_generation import get_rules
 from tvm.script import tir as T
 from tvm.target import Target
-from tvm.tir.schedule import BlockRV, Schedule
 
 
 @T.prim_func

@@ -1,4 +1,4 @@
-from func_test import check_compilation, check_perf, check_runtime, run_tests
+from func_test import check_compilation, check_runtime, run_tests
 
 
 def reward_function(file_path, test_script_path="test.py"):

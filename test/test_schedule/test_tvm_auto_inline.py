@@ -1,13 +1,9 @@
-import pytest
-
 import tvm
 import tvm.testing
 from tvm import meta_schedule as ms
-from tvm.ir.base import assert_structural_equal
 from tvm.meta_schedule.testing.space_generation import generate_design_space
 from tvm.script import tir as T
 from tvm.target import Target
-from tvm.tir import Schedule
 
 
 @tvm.script.ir_module
