@@ -104,5 +104,5 @@ def test_transformer_softmax_cuda():
 
 
 if __name__ == "__main__":
-    # test_tune_softmax_cuda()
-    test_transformer_softmax_cuda()
+    test_tune_softmax_cuda()
+    # test_transformer_softmax_cuda()

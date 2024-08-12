@@ -26,7 +26,7 @@ def layernorm(
             with T.init():
                 input_sum[ib_0, ir_0] = T.float32(0)
 
-            input_sum[ib_0, ir_0] = input_sum[ib_0, ir_0] + input[ib_0, ir_0, ip_0]
+            input_sum[ib_0, ir_0] = input_sum[ib_0, ir_0] + input_[ib_0, ir_0, ip_0]
 
     for ib, ir in T.grid(64, 4):
         with T.block("input_norm"):
@@ -37,9 +37,9 @@ def layernorm(
     input_diff = T.alloc_buffer([64, 4, 128])
     for ib, ir, ip in T.grid(64, 4, 128):
         with T.block("input_diff"):
-            ib_0, ir_0, ip_0 = T.axis.remap("SS", [ib, ir])
+            ib_0, ir_0, ip_0 = T.axis.remap("SSS", [ib, ir, ip])
             input_diff[ib_0, ir_0, ip_0] = (
-                input[ib_0, ir_0, ip_0] - input_mean[ib_0, ir_0]
+                input_[ib_0, ir_0, ip_0] - input_mean[ib_0, ir_0]
             )
 
     input_variance = T.alloc_buffer([64, 4], dtype="float32")
@@ -72,14 +72,14 @@ def layernorm(
         with T.block("diff_input"):
             ib_0, ir_0, ip_0 = T.axis.remap("SSS", [ib, ir, ip])
             diff_input[ib_0, ir_0, ip_0] = (
-                input[ib_0, ir_0, ip_0] - input_mean[ib_0, ir_0]
+                input_[ib_0, ir_0, ip_0] - input_mean[ib_0, ir_0]
             )
 
     diff_gamma = T.alloc_buffer([64, 4, 128], dtype="float32")
     for ib, ir, ip in T.grid(64, 4, 128):
         with T.block("diff_gamma"):
             ib_0, ir_0, ip_0 = T.axis.remap("SSS", [ib, ir, ip])
-            diff_gamma[ib_0, ir_0, ip_0] = input_diff[ib_0, ir_0, ip_0] * gamma[ip_0]
+            diff_gamma[ib_0, ir_0, ip_0] = input_diff[ib_0, ir_0, ip_0] * gamma_[ip_0]
 
     diff_div = T.alloc_buffer([64, 4, 128], dtype="float32")
     for ib, ir, ip in T.grid(64, 4, 128):
@@ -92,13 +92,13 @@ def layernorm(
     for ib, ir, ip in T.grid(64, 4, 128):
         with T.block("output"):
             ib_0, ir_0, ip_0 = T.axis.remap("SSS", [ib, ir, ip])
-            output[ib_0, ir_0, ip_0] = diff_div[ib_0, ir_0, ip_0] + beta[ip_0]
+            output_[ib_0, ir_0, ip_0] = diff_div[ib_0, ir_0, ip_0] + beta_[ip_0]
 
 
-def test_flash_atten_cuda():
+def test_layernorm_cuda():
     rules = ms.ScheduleRule.create("cuda")
     context = ms.TuneContext(
-        mod=flash_atten,
+        mod=layernorm,
         target=Target("nvidia/nvidia-a100", host="llvm"),
         task_name="Double Rules Task",
         space_generator=ms.space_generator.PostOrderApply(
@@ -111,14 +111,14 @@ def test_flash_atten_cuda():
     print("[INFO]**************num: ", len(context.generate_design_space()))
 
 
-def test_transform_attention_llvm():
+def test_layernorm_llvm():
     # rules = ms.ScheduleRule.create("llvm")
     rules = get_rules(kind="llvm", types=ms.schedule_rule.AutoInline) + [
         ms.schedule_rule.RandomComputeLocation(),
         ms.schedule_rule.InlineConstantScalars(),
     ]
     context = ms.TuneContext(
-        mod=flash_atten,
+        mod=layernorm,
         target=Target("llvm --num-cores=16"),
         task_name="Double Rules Task",
         space_generator=ms.space_generator.PostOrderApply(
@@ -133,5 +133,5 @@ def test_transform_attention_llvm():
 
 
 if __name__ == """__main__""":
-    test_flash_atten_cuda()
-    test_flash_atten_llvm()
+    test_layernorm_cuda()
+    # test_layernorm_llvm()
