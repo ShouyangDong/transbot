@@ -5,6 +5,7 @@ from tvm.target import Target
 import torch
 import torch.nn.functional as F
 
+
 @T.prim_func
 def deformable_attention(
     value: T.handle,
@@ -157,6 +158,7 @@ def deformable_attention(
                                 ) * attention_weights_[batch, j, i_m, i, k]
                         output_[batch, j, i_m * 256 + i_d] = attention_sum[0]
 
+
 @torch.no_grad()
 def deformable_attention_pytorch(
     value, value_spatial_shapes, sampling_locations, attention_weights
@@ -257,6 +259,7 @@ def test_correctness(myfunc):
     time_ms = timeit.timeit(f, number=100) / 100 * 1000
     print(f"Handwritten CUDA: {time_ms:.3f}ms")
     print(f"Speedup: {time_ms/(mean_time*1000):.2f}x")
+
 
 if __name__ == "__main__":
     # test_deformable_attention_cuda()
