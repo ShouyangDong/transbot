@@ -112,6 +112,14 @@ def test_layernorm_cuda():
     print("[INFO]**************num: ", len(context.generate_design_space()))
 
 
+def ref_program(x, gamma, beta, eps=1e-5):
+    mean = np.mean(x, axis=-1, keepdims=True)
+    std = np.std(x, axis=-1, keepdims=True)
+    x_normalized = (x - mean) / (std + eps)
+    out = gamma * x_normalized + beta
+    return out
+
+
 def test_tune_layernorm_cuda():
     rules = ms.ScheduleRule.create("cuda")
     with tempfile.TemporaryDirectory() as work_dir:
@@ -132,6 +140,21 @@ def test_tune_layernorm_cuda():
         assert sch is not None
         sch.mod.show()
         sch.trace.show()
+
+        mod = sch.mod
+        print("[INFO]**************space: ", mod)
+        dev = tvm.device("cuda", 0)
+        input_array = np.random.uniform(size=[64, 100, 4096]).astype(dtype)
+        gamma_array = np.random.uniform(size=[4096]).astype(dtype)
+        beta_array = np.random.uniform(size=[4096]).astype(dtype)
+        expected_output = ref_program(input_array, gamma_array, beta_array)
+
+        buff_a = tvm.nd.array(input_array, dev)
+        buff_b = tvm.nd.array(gamma_array, dev)
+        buff_c = tvm.nd.array(beta_array, dev)
+        myfunc = tvm.build(mod, target="cuda", name="layernorm")
+        myfunc(buff_a, buff_b, buff_c)
+        tvm.testing.assert_allclose(buff_c.numpy(), expected_output, rtol=1e-3)
 
 
 def test_layernorm_llvm():
