@@ -25,7 +25,7 @@ def flash_atten(q: T.handle, k: T.handle, v: T.handle, o: T.handle) -> None:
             with T.init():
                 S[vi, vj, vk, vm] = 0.0
             S[vi, vj, vk, vm] = (
-                O[vi, vj, vk, vm] + Q[vi, vj, vk, vn] * K[vi, vj, vm, vn]
+                S[vi, vj, vk, vm] + Q[vi, vj, vk, vn] * K[vi, vj, vm, vn]
             )
 
     for i, j, m, n in T.grid(64, 4096, 12, 12):
@@ -75,7 +75,7 @@ def flash_atten(q: T.handle, k: T.handle, v: T.handle, o: T.handle) -> None:
             with T.init():
                 O[vi, vj, vk, vm] = 0.0
             O[vi, vj, vk, vm] = (
-                O[vi, vj, vk, vm] + softmax_norm[vi, vj, vk, vn] * V[vi, vj, vk, vm]
+                O[vi, vj, vk, vm] + softmax_norm[vi, vj, vk, vn] * V[vi, vj, vn, vm]
             )
 
 
@@ -92,7 +92,7 @@ def test_flash_atten_cuda():
         ),
     )
     print("[INFO]**************space: ", context.generate_design_space()[0].mod)
-    print("[INFO]**************num: ", len(context.generate_design_space()))
+    # print("[INFO]**************num: ", context.generate_design_space())
 
 
 def test_tune_flash_atten_cuda():
@@ -139,6 +139,6 @@ def test_transform_attention_llvm():
 
 
 if __name__ == """__main__""":
-    # test_flash_atten_cuda()
+    test_flash_atten_cuda()
     # test_transform_attention_llvm()
-    test_tune_flash_atten_cuda()
+    # test_tune_flash_atten_cuda()
