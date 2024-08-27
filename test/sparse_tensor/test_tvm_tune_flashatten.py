@@ -1,7 +1,8 @@
 import logging
 import tempfile
 
-
+import tvm
+import numpy as np
 from tvm import meta_schedule as ms
 from tvm.script import tir as T
 from tvm.target import Target
@@ -93,7 +94,18 @@ def test_flash_atten_cuda():
     )
     print("[INFO]**************space: ", context.generate_design_space()[0].mod)
     print("[INFO]**************num: ", context.generate_design_space())
-
+    for space in context.generate_design_space():
+        mod = space.mod
+        print("[IFNO]************************space: ", mod)
+        dev = tvm.device("cuda", 0)
+        a_np = np.random.uniform(size=(64, 4096, 12, 256)).astype("float32")
+        b_np = np.random.uniform(size=(64, 4096, 12, 256)).astype("float32")
+        c_np = np.random.uniform(size=(64, 4096, 12, 256)).astype("float32")
+        buff_a = tvm.nd.array(a_np, dev)
+        buff_b = tvm.nd.array(b_np, dev)
+        buff_c = tvm.nd.array(c_np, dev)
+        myfunc = tvm.build(mod, target="cuda", name="flashatten")
+        myfunc(buff_a, buff_b, buff_c)
 
 def test_tune_flash_atten_cuda():
     rules = ms.ScheduleRule.create("cuda")
