@@ -34,7 +34,6 @@ def layernorm(
     for ib, ir in T.grid(64, 100):
         with T.block("input_norm"):
             ib_0, ir_0 = T.axis.remap("SS", [ib, ir])
-
             input_mean[ib_0, ir_0] = input_sum[ib_0, ir_0] / T.float32(4096)
 
     input_diff = T.alloc_buffer([64, 100, 4096])
@@ -50,10 +49,8 @@ def layernorm(
     for ib, ir, ip in T.grid(64, 100, 4096):
         with T.block("input_variance"):
             ib_0, ir_0, ip_0 = T.axis.remap("SSR", [ib, ir, ip])
-
             with T.init():
                 input_variance[ib_0, ir_0] = T.float32(0)
-
             input_variance[ib_0, ir_0] = (
                 input_variance[ib_0, ir_0] + input_diff[ib_0, ir_0, ip_0]
             )
@@ -159,6 +156,9 @@ def test_tune_layernorm_cuda():
         buff_d = tvm.nd.array(output_array, dev)
         myfunc = tvm.build(mod, target="cuda", name="layernorm")
         myfunc(buff_a, buff_b, buff_c, buff_d)
+        dev_module = myfunc.imported_modules[0]
+        print("-----GPU code-----")
+        print(dev_module.get_source())
         tvm.testing.assert_allclose(buff_d.numpy(), expected_output, rtol=1e-3)
 
 
