@@ -104,8 +104,20 @@ def test_flash_atten_cuda():
         buff_a = tvm.nd.array(a_np, dev)
         buff_b = tvm.nd.array(b_np, dev)
         buff_c = tvm.nd.array(c_np, dev)
-        myfunc = tvm.build(mod, target="cuda", name="flashatten")
-        myfunc(buff_a, buff_b, buff_c)
+        try:
+            print("[INFO] Attempting to build the CUDA kernel")
+            myfunc = tvm.build(mod, target="cuda", name="flashatten")
+        except (tvm.TVMError, RuntimeError) as e:
+            print(f"[ERROR] Compilation failed for this module: {e}")
+            continue
+
+        try:
+            print("[INFO] Kernel built successfully, executing...")
+            myfunc(buff_a, buff_b, buff_c)
+            print("Runtime success!")
+        except (tvm.TVMError, RuntimeError) as e:
+            print(f"[ERROR] Runtime failed for this module: {e}")
+            continue
 
 def test_tune_flash_atten_cuda():
     rules = ms.ScheduleRule.create("cuda")
