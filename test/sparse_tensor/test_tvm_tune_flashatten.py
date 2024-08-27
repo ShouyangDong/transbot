@@ -119,6 +119,7 @@ def test_flash_atten_cuda():
             print(f"[ERROR] Runtime failed for this module: {e}")
             continue
 
+
 def test_tune_flash_atten_cuda():
     rules = ms.ScheduleRule.create("cuda")
     with tempfile.TemporaryDirectory() as work_dir:

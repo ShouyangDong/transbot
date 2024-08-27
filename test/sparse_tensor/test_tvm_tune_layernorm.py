@@ -1,7 +1,9 @@
 import logging
 import tempfile
 
-
+import tvm
+import numpy as np
+import tvm.testing
 from tvm import meta_schedule as ms
 from tvm.script import tir as T
 from tvm.target import Target
@@ -144,25 +146,24 @@ def test_tune_layernorm_cuda():
         mod = sch.mod
         print("[INFO]**************space: ", mod)
         dev = tvm.device("cuda", 0)
+        dtype = "float32"
         input_array = np.random.uniform(size=[64, 100, 4096]).astype(dtype)
         gamma_array = np.random.uniform(size=[4096]).astype(dtype)
         beta_array = np.random.uniform(size=[4096]).astype(dtype)
+        output_array = np.random.uniform(size=[64, 100, 4096]).astype(dtype)
         expected_output = ref_program(input_array, gamma_array, beta_array)
 
         buff_a = tvm.nd.array(input_array, dev)
         buff_b = tvm.nd.array(gamma_array, dev)
         buff_c = tvm.nd.array(beta_array, dev)
+        buff_d = tvm.nd.array(output_array, dev)
         myfunc = tvm.build(mod, target="cuda", name="layernorm")
-        myfunc(buff_a, buff_b, buff_c)
-        tvm.testing.assert_allclose(buff_c.numpy(), expected_output, rtol=1e-3)
+        myfunc(buff_a, buff_b, buff_c, buff_d)
+        tvm.testing.assert_allclose(buff_d.numpy(), expected_output, rtol=1e-3)
 
 
 def test_layernorm_llvm():
-    # rules = ms.ScheduleRule.create("llvm")
-    rules = get_rules(kind="llvm", types=ms.schedule_rule.AutoInline) + [
-        ms.schedule_rule.RandomComputeLocation(),
-        ms.schedule_rule.InlineConstantScalars(),
-    ]
+    rules = ms.ScheduleRule.create("llvm")
     context = ms.TuneContext(
         mod=layernorm,
         target=Target("llvm --num-cores=16"),
