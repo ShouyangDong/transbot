@@ -76,7 +76,7 @@ def ref_program(x):
     return e_x / np.sum(e_x, axis=-1, keepdims=True)
 
 
-def test_transformer_softmax_cuda():
+def test_transform_softmax_cuda():
     rules = ms.ScheduleRule.create("cuda")
     context = ms.TuneContext(
         mod=Softmax,
@@ -104,5 +104,5 @@ def test_transformer_softmax_cuda():
 
 
 if __name__ == "__main__":
-    test_tune_softmax_cuda()
-    # test_transformer_softmax_cuda()
+    # test_tune_softmax_cuda()
+    test_transform_softmax_cuda()
