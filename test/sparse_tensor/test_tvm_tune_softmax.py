@@ -78,6 +78,21 @@ def ref_program(x):
 
 def test_transform_softmax_cuda():
     rules = ms.ScheduleRule.create("cuda")
+    rules = [
+        # ms.schedule_rule.AutoInline(
+        #     into_producer=True,
+        #     into_consumer=True,
+        #     inline_const_tensor=True,
+        #     disallow_if_then_else=False,
+        #     require_injective=False,
+        #     require_ordered=False,
+        # ),
+        ms.schedule_rule.CrossThreadReduction(
+            thread_extents=[4, 8, 16, 32, 64, 128, 256, 512]
+        ),
+        ms.schedule_rule.AutoBind(),
+    ]
+    # print("[INFO]***************rules: ", rules)
     context = ms.TuneContext(
         mod=Softmax,
         target=Target("nvidia/nvidia-a100", host="llvm"),
@@ -100,6 +115,9 @@ def test_transform_softmax_cuda():
         buff_c = tvm.nd.array(np.zeros((64, 1280), dtype="float32"), dev)
         myfunc = tvm.build(mod, target="cuda", name="softmax")
         myfunc(buff_a, buff_c)
+        dev_module = myfunc.imported_modules[0]
+        print("-----GPU code-----")
+        print(dev_module.get_source())
         tvm.testing.assert_allclose(buff_c.numpy(), c_np, rtol=1e-3)
 
 

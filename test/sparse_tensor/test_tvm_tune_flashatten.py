@@ -81,7 +81,18 @@ def flash_atten(q: T.handle, k: T.handle, v: T.handle, o: T.handle) -> None:
 
 
 def test_flash_atten_cuda():
-    rules = ms.ScheduleRule.create("cuda")
+    # rules = ms.ScheduleRule.create("cuda")
+    rules = [
+        ms.schedule_rule.AutoInline(
+            into_producer=True,
+            into_consumer=True,
+            inline_const_tensor=True,
+            disallow_if_then_else=False,
+            require_injective=False,
+            require_ordered=False,
+        ),
+        ms.schedule_rule.AutoBind(),
+    ]
     context = ms.TuneContext(
         mod=flash_atten,
         target=Target("nvidia/nvidia-a100", host="llvm"),
@@ -101,9 +112,11 @@ def test_flash_atten_cuda():
         a_np = np.random.uniform(size=(64, 4096, 12, 256)).astype("float32")
         b_np = np.random.uniform(size=(64, 4096, 12, 256)).astype("float32")
         c_np = np.random.uniform(size=(64, 4096, 12, 256)).astype("float32")
+        o_np = np.random.uniform(size=(64, 4096, 12, 256)).astype("float32")
         buff_a = tvm.nd.array(a_np, dev)
         buff_b = tvm.nd.array(b_np, dev)
         buff_c = tvm.nd.array(c_np, dev)
+        buff_o = tvm.nd.array(o_np, dev)
         try:
             print("[INFO] Attempting to build the CUDA kernel")
             myfunc = tvm.build(mod, target="cuda", name="flashatten")
@@ -113,7 +126,7 @@ def test_flash_atten_cuda():
 
         try:
             print("[INFO] Kernel built successfully, executing...")
-            myfunc(buff_a, buff_b, buff_c)
+            myfunc(buff_a, buff_b, buff_c, buff_o)
             print("Runtime success!")
         except (tvm.TVMError, RuntimeError) as e:
             print(f"[ERROR] Runtime failed for this module: {e}")

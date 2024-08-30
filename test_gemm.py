@@ -1,10 +1,8 @@
 import tempfile
 
 import numpy as np
-import torch
 
 import tvm
-import timeit
 import tvm.testing
 from tvm import meta_schedule as ms
 from tvm.script import tir as T
@@ -72,8 +70,11 @@ def test_tune_sddmm_cuda():
         # print(f"Handwritten CUDA: {time_ms:.3f}ms")
         # print(f"Speedup: {time_ms/(mean_time*1000):.2f}x")
 
+
 def test_gemm_cuda():
-    rules = ms.ScheduleRule.create("cuda")
+    # rules = ms.ScheduleRule.create("cuda")
+    # print("[INFO]*******rules: ", rules)
+    rules = [ms.schedule_rule.AutoBind()]
     context = ms.TuneContext(
         mod=sddmm,
         target=Target("nvidia/nvidia-a100", host="llvm"),
@@ -84,8 +85,8 @@ def test_gemm_cuda():
             mutator_probs={},
         ),
     )
-    print("[INFO]**************space: ", context.generate_design_space()[0].mod)
-    print("[INFO]**************num: ", context.generate_design_space())
+    # print("[INFO]**************space: ", context.generate_design_space()[0].mod)
+    # print("[INFO]**************num: ", context.generate_design_space())
     for space in context.generate_design_space():
         dev = tvm.device("cuda", 0)
         a_np = np.random.uniform(size=(64, 4096, 12, 256)).astype("float32")
@@ -93,7 +94,7 @@ def test_gemm_cuda():
         buff_a = tvm.nd.array(a_np, dev)
         buff_b = tvm.nd.array(b_np, dev)
         buff_c = tvm.nd.array(np.zeros((64, 4096, 12, 12), dtype="float32"), dev)
-        
+
         try:
             print("[INFO] Attempting to build the CUDA kernel")
             myfunc = tvm.build(space.mod, target="cuda", name="sddmm")
@@ -105,6 +106,9 @@ def test_gemm_cuda():
             print("[INFO] Kernel built successfully, executing...")
             myfunc(buff_a, buff_b, buff_c)
             print("Runtime success!")
+            dev_module = myfunc.imported_modules[0]
+            print("-----GPU code-----")
+            print(dev_module.get_source())
         except (tvm.TVMError, RuntimeError) as e:
             print(f"[ERROR] Runtime failed for this module: {e}")
             continue
