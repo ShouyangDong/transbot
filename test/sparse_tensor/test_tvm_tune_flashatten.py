@@ -18,8 +18,8 @@ def flash_atten(q: T.handle, k: T.handle, v: T.handle, o: T.handle) -> None:
     V = T.match_buffer(v, [64, 4096, 12, 256], "float32")
     O = T.match_buffer(o, [64, 4096, 12, 256], "float32")
 
-    S = T.alloc_buffer([64, 4096, 12, 12], "float32")
-    N = T.alloc_buffer([64, 4096, 12, 12], "float32")
+    S = T.alloc_buffer([64, 4096, 12, 12], "float32", scope="local")
+    N = T.alloc_buffer([64, 4096, 12, 12], "float32", scope="local")
     for i, j, k, m, n in T.grid(64, 4096, 12, 12, 256):
         with T.block("flash_atten"):
             vi, vj, vk, vm, vn = T.axis.remap("SSSSR", [i, j, k, m, n])
@@ -34,7 +34,7 @@ def flash_atten(q: T.handle, k: T.handle, v: T.handle, o: T.handle) -> None:
             vi, vj, vm, vn = T.axis.remap("SSSS", [i, j, m, n])
             N[vi, vj, vm, vn] = S[vi, vj, vm, vn] / 256
 
-    softmax_maxelem = T.alloc_buffer([64, 4096, 12], "float32")
+    softmax_maxelem = T.alloc_buffer([64, 4096, 12], "float32", scope="local")
     for i, j, m, n in T.grid(64, 4096, 12, 12):
         with T.block("softmax_maxelem"):
             i_0, j_0, m_0, n_0 = T.axis.remap("SSSR", [i, j, m, n])
@@ -44,7 +44,7 @@ def flash_atten(q: T.handle, k: T.handle, v: T.handle, o: T.handle) -> None:
                 softmax_maxelem[i_0, j_0, m_0], N[i_0, j_0, m_0, n_0]
             )
 
-    softmax_exp = T.alloc_buffer([64, 4096, 12, 12], "float32")
+    softmax_exp = T.alloc_buffer([64, 4096, 12, 12], "float32", scope="local")
     for i, j, m, n in T.grid(64, 4096, 12, 12):
         with T.block("softmax_exp"):
             i_0, j_0, m_0, n_0 = T.axis.remap("SSSS", [i, j, m, n])
@@ -52,7 +52,7 @@ def flash_atten(q: T.handle, k: T.handle, v: T.handle, o: T.handle) -> None:
                 N[i_0, j_0, m_0, n_0] - softmax_maxelem[i_0, j_0, m_0], dtype="float32"
             )
 
-    softmax_expsum = T.alloc_buffer([64, 4096, 12], "float32")
+    softmax_expsum = T.alloc_buffer([64, 4096, 12], "float32", scope="local")
     for i, j, m, n in T.grid(64, 4096, 12, 12):
         with T.block("softmax_expsum"):
             i_0, j_0, m_0, n_0 = T.axis.remap("SSSS", [i, j, m, n])
@@ -62,7 +62,7 @@ def flash_atten(q: T.handle, k: T.handle, v: T.handle, o: T.handle) -> None:
                 softmax_expsum[i_0, j_0, m_0] + softmax_exp[i_0, j_0, m_0, n_0]
             )
 
-    softmax_norm = T.alloc_buffer([64, 4096, 12, 12], "float32")
+    softmax_norm = T.alloc_buffer([64, 4096, 12, 12], "float32", scope="local")
     for i, j, m, n in T.grid(64, 4096, 12, 12):
         with T.block("softmax_norm"):
             i_0, j_0, m_0, n_0 = T.axis.remap("SSSS", [i, j, m, n])
@@ -91,6 +91,8 @@ def test_flash_atten_cuda():
             require_injective=False,
             require_ordered=False,
         ),
+        ms.schedule_rule.RandomComputeLocation(),    
+        ms.schedule_rule.RandomComputeLocation(),
         ms.schedule_rule.AutoBind(),
     ]
     context = ms.TuneContext(
@@ -128,6 +130,9 @@ def test_flash_atten_cuda():
             print("[INFO] Kernel built successfully, executing...")
             myfunc(buff_a, buff_b, buff_c, buff_o)
             print("Runtime success!")
+            dev_module = myfunc.imported_modules[0]
+            print("-----GPU code-----")
+            print(dev_module.get_source())
         except (tvm.TVMError, RuntimeError) as e:
             print(f"[ERROR] Runtime failed for this module: {e}")
             continue
