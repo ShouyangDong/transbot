@@ -96,7 +96,21 @@ def layernorm(
 
 
 def test_layernorm_cuda():
-    rules = ms.ScheduleRule.create("cuda")
+    rules = [
+        ms.schedule_rule.AutoInline(
+            into_producer=True,
+            into_consumer=True,
+            inline_const_tensor=True,
+            disallow_if_then_else=False,
+            require_injective=False,
+            require_ordered=False,
+        ),
+        ms.schedule_rule.RandomComputeLocation(),    
+        ms.schedule_rule.RandomComputeLocation(),
+        ms.schedule_rule.RandomComputeLocation(),    
+        ms.schedule_rule.RandomComputeLocation(),
+        ms.schedule_rule.AutoBind(),
+    ]   
     context = ms.TuneContext(
         mod=layernorm,
         target=Target("nvidia/nvidia-a100", host="llvm"),
@@ -109,7 +123,25 @@ def test_layernorm_cuda():
     )
     print("[INFO]**************space: ", context.generate_design_space()[0].mod)
     print("[INFO]**************num: ", len(context.generate_design_space()))
+    for space in context.generate_design_space():
+        mod = space.mod
+        dev = tvm.device("cuda", 0)
+        dtype = "float32"
+        input_array = np.random.uniform(size=[64, 100, 4096]).astype(dtype)
+        gamma_array = np.random.uniform(size=[4096]).astype(dtype)
+        beta_array = np.random.uniform(size=[4096]).astype(dtype)
+        output_array = np.random.uniform(size=[64, 100, 4096]).astype(dtype)
+        expected_output = ref_program(input_array, gamma_array, beta_array)
 
+        buff_a = tvm.nd.array(input_array, dev)
+        buff_b = tvm.nd.array(gamma_array, dev)
+        buff_c = tvm.nd.array(beta_array, dev)
+        buff_d = tvm.nd.array(output_array, dev)
+        myfunc = tvm.build(mod, target="cuda", name="layernorm")
+        myfunc(buff_a, buff_b, buff_c, buff_d)
+        dev_module = myfunc.imported_modules[0]
+        print("-----GPU code-----")
+        print(dev_module.get_source())
 
 def ref_program(x, gamma, beta, eps=1e-5):
     mean = np.mean(x, axis=-1, keepdims=True)
@@ -181,5 +213,5 @@ def test_layernorm_llvm():
 
 if __name__ == """__main__""":
     test_layernorm_cuda()
-    test_layernorm_llvm()
-    test_tune_layernorm_cuda()
+    # test_layernorm_llvm()
+    # test_tune_layernorm_cuda()
