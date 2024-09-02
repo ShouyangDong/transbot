@@ -20,9 +20,9 @@ class Softmax:
         A: T.Buffer((64, 1280), "float32"),
         T_softmax_norm: T.Buffer((64, 1280), "float32"),
     ) -> None:
-        T_softmax_maxelem = T.alloc_buffer([64], dtype="float32")
-        T_softmax_exp = T.alloc_buffer([64, 1280], dtype="float32")
-        T_softmax_expsum = T.alloc_buffer([64], dtype="float32")
+        T_softmax_maxelem = T.alloc_buffer([64], dtype="float32", scope="local")
+        T_softmax_exp = T.alloc_buffer([64, 1280], dtype="float32", scope="local")
+        T_softmax_expsum = T.alloc_buffer([64], dtype="float32", scope="local")
         for i0, i1 in T.grid(64, 1280):
             with T.block("T_softmax_maxelem"):
                 i0_1, k = T.axis.remap("SR", [i0, i1])
@@ -79,20 +79,18 @@ def ref_program(x):
 def test_transform_softmax_cuda():
     rules = ms.ScheduleRule.create("cuda")
     rules = [
-        # ms.schedule_rule.AutoInline(
-        #     into_producer=True,
-        #     into_consumer=True,
-        #     inline_const_tensor=True,
-        #     disallow_if_then_else=False,
-        #     require_injective=False,
-        #     require_ordered=False,
-        # ),
-        ms.schedule_rule.CrossThreadReduction(
-            thread_extents=[4, 8, 16, 32, 64, 128, 256, 512]
+        ms.schedule_rule.AutoInline(
+            into_producer=True,
+            into_consumer=True,
+            inline_const_tensor=True,
+            disallow_if_then_else=False,
+            require_injective=False,
+            require_ordered=False,
         ),
+        ms.schedule_rule.RandomComputeLocation(),    
+        ms.schedule_rule.RandomComputeLocation(),    
         ms.schedule_rule.AutoBind(),
     ]
-    # print("[INFO]***************rules: ", rules)
     context = ms.TuneContext(
         mod=Softmax,
         target=Target("nvidia/nvidia-a100", host="llvm"),
@@ -122,5 +120,5 @@ def test_transform_softmax_cuda():
 
 
 if __name__ == "__main__":
-    # test_tune_softmax_cuda()
-    test_transform_softmax_cuda()
+    test_tune_softmax_cuda()
+    # test_transform_softmax_cuda()
