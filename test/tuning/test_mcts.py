@@ -1,7 +1,8 @@
 from treelib import Tree
 import numpy as np
 import tvm
-
+from tvm import meta_schedule as ms
+import random
 
 def verify_runtime(node):
     """Tries to build and then execute a function defined in a TVM module.
@@ -39,14 +40,25 @@ class Data(object):
         )
 
 
+Actions = [
+    ms.schedule_rule.add_rfactor(),
+    ms.schedule_rule.auto_bind(),
+    ms.schedule_rule.auto_inline(),
+    ms.schedule_rule.cross_thread_reduction(),
+    ms.schedule_rule.multi_level_tiling(),
+    ms.schedule_rule.parallel_vector_unroll(),
+    ms.schedule_rule.random_compute_location(),
+    ms.schedule_rule.inline_constant_scalars(),
+]
+
 class MCTS(object):
-    def __init__(self, func, domain, max_depth=10, rollout_times=10):
+    def __init__(self, func, max_depth=10, rollout_times=10):
         self.max_depth = max_depth
         self.tree = Tree()
         self.func = func
-        self.domain = domain
+        self.domain = Actions
         self.rollout_times = rollout_times
-        self.root = self.tree.create_node("root", data=Data(domain=domain))
+        self.root = self.tree.create_node("root", data=Data(domain=self.domain))
 
     def train(self, steps=100):
         for n in range(steps):
@@ -117,17 +129,23 @@ class MCTS(object):
         domain = node.data.domain
         scores = []
         for n in range(self.rollout_times):
-            x = domain[0] + np.random.random() * (domain[1] - domain[0])
-            score = self.func(x)
+            x = random.choices(domain)
+            score = self.func(x, node.input)
             scores.append(score)
         return np.max(scores)
 
 
-def func(x):
-    return -np.sin(2 * x * np.pi) - x
+def func(x, input_sketch):
+    target = Target("cuda", host="llvm")
+    (space, ) = generate_design_space(
+        kind = "cuda",
+        mod = input_sketch,
+        target=target,
+        types=x
+    )
+    return space.mod
 
-
-mcts = MCTS(func, [-1, 1], max_depth=16)
+mcts = MCTS(func, max_depth=16)
 mcts.train()
 x_best, y = mcts.get_optimal()
 
