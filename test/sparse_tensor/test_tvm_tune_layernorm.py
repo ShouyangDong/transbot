@@ -105,12 +105,12 @@ def test_layernorm_cuda():
             require_injective=False,
             require_ordered=False,
         ),
-        ms.schedule_rule.RandomComputeLocation(),    
         ms.schedule_rule.RandomComputeLocation(),
-        ms.schedule_rule.RandomComputeLocation(),    
+        ms.schedule_rule.RandomComputeLocation(),
+        ms.schedule_rule.RandomComputeLocation(),
         ms.schedule_rule.RandomComputeLocation(),
         ms.schedule_rule.AutoBind(),
-    ]   
+    ]
     context = ms.TuneContext(
         mod=layernorm,
         target=Target("nvidia/nvidia-a100", host="llvm"),
@@ -142,6 +142,7 @@ def test_layernorm_cuda():
         dev_module = myfunc.imported_modules[0]
         print("-----GPU code-----")
         print(dev_module.get_source())
+
 
 def ref_program(x, gamma, beta, eps=1e-5):
     mean = np.mean(x, axis=-1, keepdims=True)

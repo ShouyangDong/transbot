@@ -1,5 +1,25 @@
 from treelib import Tree
 import numpy as np
+import tvm
+
+
+def verify_runtime(node):
+    """Tries to build and then execute a function defined in a TVM module.
+    It uses exception handling to catch any errors that might occur during
+    these processes. If everything goes smoothly, it returns True, indicating
+    that the node is ready for runtime execution. If any issues arise during 
+    building or execution, it catches the exceptions and returns False."""
+    try:
+        myfunc = tvm.build(node.mod, target=nod.target, name=node.name)
+    except:
+        return False
+
+    try:
+        myfunc(*node.inputs)
+    except:
+        return False
+
+    return True
 
 
 class Data(object):
@@ -69,7 +89,9 @@ class MCTS(object):
         return bool(self.tree.children(node.identifier))
 
     def is_terminal(self, node):
-        return self.tree.level(node.identifier) == self.max_depth
+        return self.tree.level(node.identifier) == self.max_depth or verify_runtime(
+            node
+        )
 
     def back_propagate(self, node, score):
         while True:

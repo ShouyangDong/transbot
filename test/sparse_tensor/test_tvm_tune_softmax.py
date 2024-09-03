@@ -87,8 +87,8 @@ def test_transform_softmax_cuda():
             require_injective=False,
             require_ordered=False,
         ),
-        ms.schedule_rule.RandomComputeLocation(),    
-        ms.schedule_rule.RandomComputeLocation(),    
+        ms.schedule_rule.RandomComputeLocation(),
+        ms.schedule_rule.RandomComputeLocation(),
         ms.schedule_rule.AutoBind(),
     ]
     context = ms.TuneContext(

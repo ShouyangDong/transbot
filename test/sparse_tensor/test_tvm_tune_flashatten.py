@@ -91,7 +91,7 @@ def test_flash_atten_cuda():
             require_injective=False,
             require_ordered=False,
         ),
-        ms.schedule_rule.RandomComputeLocation(),    
+        ms.schedule_rule.RandomComputeLocation(),
         ms.schedule_rule.RandomComputeLocation(),
         ms.schedule_rule.AutoBind(),
     ]
