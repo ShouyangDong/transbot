@@ -1,7 +1,6 @@
 import random
 import tvm
 from tvm import meta_schedule as ms
-from tvm.meta_schedule.testing.space_generation import generate_design_spac
 
 Actions = [
     ms.schedule_rule.add_rfactor(),
@@ -14,10 +13,11 @@ Actions = [
     ms.schedule_rule.inline_constant_scalars(),
 ]
 
+
 class ProgramState(object):
     def __init__(self, mod, inputs, target, name):
         self.mod = mod
-        self.inputs = inputs 
+        self.inputs = inputs
         self.target = target
         self.name = name
 
@@ -28,11 +28,8 @@ class ProgramState(object):
         return Actions
 
     def perform_action(self, action):
-        (space, ) = generate_design_space(
-            kind = "cuda",
-            mod = self.mod,
-            target=self.target,
-            types=action
+        (space,) = generate_design_space(
+            kind="cuda", mod=self.mod, target=self.target, types=action
         )
         return ProgramState(space.mod, self.inputs, self.target, self.name)
 
@@ -68,10 +65,12 @@ def mcts(node, iterations):
         simulation_result = simulate(leaf)
         backpropagate(leaf, simulation_result)
 
+
 def select(node):
     while not node.children and not node.state.is_terminal():
         node = expand(node)
     return node
+
 
 def expand(node):
     actions = node.state.get_legal_actions()
@@ -81,12 +80,14 @@ def expand(node):
         node.children.append(child_node)
     return node.children[0]
 
+
 def simulate(node):
     state = node.state
     while not state.is_terminal():
         action = state.get_random_action()
         state = state.perform_action(action)
     return evaluate(state)
+
 
 def backpropagate(node, result):
     while node:
@@ -129,6 +130,7 @@ class Softmax:
                 T_softmax_norm[i0_6, i1_2] = (
                     T_softmax_exp[i0_6, i1_2] / T_softmax_expsum[i0_6]
                 )
+
 
 if __name__ == "__main__":
     dev = tvm.device("cuda", 0)
