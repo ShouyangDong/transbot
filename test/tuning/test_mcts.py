@@ -23,21 +23,61 @@ def verify_runtime(node):
     return True
 
 
-class Data(object):
+class Node(object):
     def __init__(
-        self, domain=0, visits=0, best_score=(-np.inf), coef=2, is_terminal=False
+        self, state
     ):
-        self.visits = visits
-        self.best_score = best_score
-        self.coef = coef
-        self.domain = domain
+        self.state = state
+        self.win_value = 0
+        self.policy_value = None
+		self.visits = 0
+		self.parent = None
+		self.children = []
+		self.expanded = False
+		self.player_number = None
+		self.discovery_factor = 0.35
 
-    def ucb(self, parent_visits):
-        if self.visits == 0:
-            return np.inf
-        return self.best_score + self.coef * np.sqrt(
-            np.log(parent_visits) / self.visits
-        )
+    def update_win_value(self, value):
+        self.win_value += value
+        self.visits += 1
+
+        if self.parent:
+            self.parent.update_win_value(value)
+
+    def update_policy_value(self, value):
+        self.policy_value = value
+
+    def add_child(self, child):
+        self.children.append(child)
+        child.parent = self
+
+    def add_children(self, children):
+        for child in children:
+            self.add_child(child)
+
+    def get_preferred_child(self, root_node):
+        best_children = []
+        best_score = float("-inf")
+        for child in self.children:
+            score = child.get_score(root_node)
+
+            if score > best_score:
+                best_score = score
+                best_children = [child]
+            elif score == best_score:
+                best_children.append(child)
+
+        return random.choice(best_children)
+
+    def get_score(self, root_node):
+        discovery_operand = self.discovery_factor * (self.policy_value or 1) * sqrt(log(self.parent.visits) / (self.visits or 1))
+        win_multiplier = 1 if self.parent.player_number == root_node.player_number else -1
+        win_operand = win_multiplier * self.win_value / (self.visits or 1)
+        self.score = win_operand + discovery_operand
+        return self.score
+
+    def is_scorable(self)：
+        return self.visits or self.policy_value != None
 
 
 Actions = [
@@ -68,26 +108,40 @@ class MCTS(object):
                 score = self.rollout(node)
                 self.back_propagate(node, score)
 
+    def make_choice(self):
+        best_children = []
+        most_visits = float('-inf')
+
+        for child in self.root_node.children:
+            if child.visits > most_visits:
+                most_visits = child.visits
+                best_children = [child]
+            elif child.visits == most_visits:
+                best_children.append(child)
+        
+        return random.choice(best_children)
+
+    
+
     def get_optimal(self):
         node = self.traverse(self.root, greedy=True)
         return np.mean(node.data.domain), node.data.best_score
 
     def expand(self, node):
-        domain_left = [
-            node.data.domain[0],
-            (node.data.domain[0] + node.data.domain[1]) / 2,
-        ]
-        domain_right = [
-            (node.data.domain[0] + node.data.domain[1]) / 2,
-            node.data.domain[1],
-        ]
-        left_node = self.tree.create_node(
-            "left", parent=node, data=Data(domain=domain_left)
-        )
-        right_node = self.tree.create_node(
-            "right", parent=node, data=Data(domain=domain_right)
-        )
-        return left_node
+        self.child_finder(node, self)
+
+        for child in node.children:
+            child_win_value = self.node_evaluator(child, self)
+
+            if child_win_value != None:
+                child.update_win_value(child_win_value)
+
+            if not child.is_scorable():
+                self.random_rollout(child)
+                child.children = []
+
+        if len(node.children):
+            node.expanded = True
 
     def traverse(self, node, greedy=False):
         while True:
@@ -125,15 +179,18 @@ class MCTS(object):
             best_child = children[np.argmax(scores)]
         return best_child
 
-    def rollout(self, node):
-        domain = node.data.domain
-        scores = []
-        for n in range(self.rollout_times):
-            x = random.choices(domain)
-            score = self.func(x, node.input)
-            scores.append(score)
-        return np.max(scores)
 
+    def random_rollout(self, node)：
+        self.child_finder(node, self)
+        child = random.choice(node.children)
+        node.children = []
+        node.add_child(child)
+        child_win_value = self.node_evaluator(child, self)
+
+        if child_win_value != None:
+            node.update_win_value(child_win_value)
+        else:
+            self.random_rollout(child)
 
 def func(x, input_sketch):
     target = Target("cuda", host="llvm")
