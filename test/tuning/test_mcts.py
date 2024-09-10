@@ -86,14 +86,33 @@ class Node(object):
 
 
 Actions = [
-    ms.schedule_rule.add_rfactor(),
-    ms.schedule_rule.auto_bind(),
-    ms.schedule_rule.auto_inline(),
-    ms.schedule_rule.cross_thread_reduction(),
-    ms.schedule_rule.multi_level_tiling(),
-    ms.schedule_rule.parallel_vector_unroll(),
-    ms.schedule_rule.random_compute_location(),
-    ms.schedule_rule.inline_constant_scalars(),
+    ms.schedule_rule.AutoBind(),
+    ms.schedule_rule.AutoInline(
+        into_producer=True,
+        into_consumer=True,
+        inline_const_tensor=True,
+        disallow_if_then_else=False,
+        require_injective=False,
+        require_ordered=False,
+    ),
+    ms.schedule_rule.CrossThreadReduction(
+        thread_extents=[4, 8, 16, 32, 64, 128, 256, 512]
+    ),
+    ms.schedule_rule.MultiLevelTiling(
+        structure="SSRSRS",
+        tile_binds=None,
+        max_innermost_factor=64,
+        vector_load_lens=None,
+        reuse_read=None,
+    ),
+    ms.schedule_rule.ParallelizeVectorizeUnroll(
+        max_jobs_per_core=-1,  # disable parallelize
+        max_vectorize_extent=-1,  # disable vectorize
+        unroll_max_steps=[0, 16, 64, 512, 1024],
+        unroll_explicit=True,
+    ),
+    ms.schedule_rule.RandomComputeLocation(),
+    ms.schedule_rule.InlineConstantScalars(),
 ]
 
 

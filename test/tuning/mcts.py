@@ -7,9 +7,10 @@ import tvm.testing
 from tvm import meta_schedule as ms
 from tvm.script import tir as T
 from tvm.target import Target
+from tvm.meta_schedule.testing.space_generation import generate_design_space
 
 Actions = [
-    ms.schedule_rule.AddRFactor(),
+    # ms.schedule_rule.AddRFactor(),
     ms.schedule_rule.AutoBind(),
     ms.schedule_rule.AutoInline(
         into_producer=True,
@@ -55,7 +56,11 @@ class ProgramState(object):
 
     def perform_action(self, action):
         (space,) = generate_design_space(
-            kind="cuda", mod=self.mod, target=self.target, types=action
+            kind="cuda",
+            mod=self.mod,
+            target=self.target,
+            types=None,
+            sch_rules=[action],
         )
         return ProgramState(space.mod, self.inputs, self.target, self.name)
 
