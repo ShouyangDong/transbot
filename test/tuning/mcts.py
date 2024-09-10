@@ -10,7 +10,6 @@ from tvm.target import Target
 from tvm.meta_schedule.testing.space_generation import generate_design_space
 
 Actions = [
-    # ms.schedule_rule.AddRFactor(),
     ms.schedule_rule.AutoBind(),
     ms.schedule_rule.AutoInline(
         into_producer=True,
