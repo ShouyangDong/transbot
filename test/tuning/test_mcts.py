@@ -4,11 +4,12 @@ import tvm
 from tvm import meta_schedule as ms
 import random
 
+
 def verify_runtime(node):
     """Tries to build and then execute a function defined in a TVM module.
     It uses exception handling to catch any errors that might occur during
     these processes. If everything goes smoothly, it returns True, indicating
-    that the node is ready for runtime execution. If any issues arise during 
+    that the node is ready for runtime execution. If any issues arise during
     building or execution, it catches the exceptions and returns False."""
     try:
         myfunc = tvm.build(node.mod, target=nod.target, name=node.name)
@@ -24,18 +25,16 @@ def verify_runtime(node):
 
 
 class Node(object):
-    def __init__(
-        self, state
-    ):
+    def __init__(self, state):
         self.state = state
         self.win_value = 0
         self.policy_value = None
-		self.visits = 0
-		self.parent = None
-		self.children = []
-		self.expanded = False
-		self.player_number = None
-		self.discovery_factor = 0.35
+        self.visits = 0
+        self.parent = None
+        self.children = []
+        self.expanded = False
+        self.player_number = None
+        self.discovery_factor = 0.35
 
     def update_win_value(self, value):
         self.win_value += value
@@ -70,13 +69,19 @@ class Node(object):
         return random.choice(best_children)
 
     def get_score(self, root_node):
-        discovery_operand = self.discovery_factor * (self.policy_value or 1) * sqrt(log(self.parent.visits) / (self.visits or 1))
-        win_multiplier = 1 if self.parent.player_number == root_node.player_number else -1
+        discovery_operand = (
+            self.discovery_factor
+            * (self.policy_value or 1)
+            * sqrt(log(self.parent.visits) / (self.visits or 1))
+        )
+        win_multiplier = (
+            1 if self.parent.player_number == root_node.player_number else -1
+        )
         win_operand = win_multiplier * self.win_value / (self.visits or 1)
         self.score = win_operand + discovery_operand
         return self.score
 
-    def is_scorable(self)：
+    def is_scorable(self):
         return self.visits or self.policy_value != None
 
 
@@ -90,6 +95,7 @@ Actions = [
     ms.schedule_rule.random_compute_location(),
     ms.schedule_rule.inline_constant_scalars(),
 ]
+
 
 class MCTS(object):
     def __init__(self, func, max_depth=10, rollout_times=10):
@@ -110,7 +116,7 @@ class MCTS(object):
 
     def make_choice(self):
         best_children = []
-        most_visits = float('-inf')
+        most_visits = float("-inf")
 
         for child in self.root_node.children:
             if child.visits > most_visits:
@@ -118,10 +124,8 @@ class MCTS(object):
                 best_children = [child]
             elif child.visits == most_visits:
                 best_children.append(child)
-        
-        return random.choice(best_children)
 
-    
+        return random.choice(best_children)
 
     def get_optimal(self):
         node = self.traverse(self.root, greedy=True)
@@ -179,8 +183,7 @@ class MCTS(object):
             best_child = children[np.argmax(scores)]
         return best_child
 
-
-    def random_rollout(self, node)：
+    def random_rollout(self, node):
         self.child_finder(node, self)
         child = random.choice(node.children)
         node.children = []
@@ -192,15 +195,14 @@ class MCTS(object):
         else:
             self.random_rollout(child)
 
+
 def func(x, input_sketch):
     target = Target("cuda", host="llvm")
-    (space, ) = generate_design_space(
-        kind = "cuda",
-        mod = input_sketch,
-        target=target,
-        types=x
+    (space,) = generate_design_space(
+        kind="cuda", mod=input_sketch, target=target, types=x
     )
     return space.mod
+
 
 mcts = MCTS(func, max_depth=16)
 mcts.train()
