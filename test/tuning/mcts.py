@@ -48,25 +48,42 @@ class ProgramState(object):
         self.name = name
 
     def is_terminal(self):
+        """Check if the current state is a terminal state."""
+        if not self.evaluate():
+            return True
         return False
 
     def get_legal_actions(self):
+        """Obtain all possible actions."""
         return Actions
 
     def perform_action(self, action):
-        (space,) = generate_design_space(
+        """Generates a design space for a given `action`. It calls `generate_design_space()`
+        with specific parameters to apply the given scheduling rule (`action`) to the module.
+        The function returns a new `ProgramState` object, which represents the new program
+        state after applying the action."""
+        # TODO(dongshouyang):change the spaces
+        spaces = generate_design_space(
             kind="cuda",
             mod=self.mod,
             target=self.target,
             types=None,
             sch_rules=[action],
         )
-        return ProgramState(space.mod, self.inputs, self.target, self.name)
+        return ProgramState(spaces[0].mod, self.inputs, self.target, self.name)
 
     def get_random_action(self):
+        """Randomly select and return an action from the available list of Actions."""
         return random.choice(Actions)
 
     def evaluate(self):
+        """This `evaluate()` function attempts to build and execute a function using TVM.
+        - The function first tries to build the function using `tvm.build()`.
+            If this step fails, it returns `False`.
+        - If the build is successful, it tries to run the function with the provided inputs.
+            If this execution step fails, it also returns `False`.
+        - If both steps (build and execution) are successful, the function returns `True`,
+            indicating that the evaluation was successful."""
         try:
             myfunc = tvm.build(self.mod, target=self.target, name=self.name)
         except:
@@ -105,6 +122,7 @@ def select(node):
 def expand(node):
     actions = node.state.get_legal_actions()
     for action in actions:
+        print("[INFO]*************action: ", action)
         child_state = node.state.perform_action(action)
         child_node = Node(child_state, parent=node)
         node.children.append(child_node)
@@ -123,7 +141,7 @@ def backpropagate(node, result):
     while node:
         node.visits += 1
         node.score += result
-        node = node.parent
+        node = node.parentevaluate
 
 
 @tvm.script.ir_module
