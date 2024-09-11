@@ -107,6 +107,7 @@ class Node(object):
 
 
 def mcts(node, iterations):
+    """Run MCTS for a given number of iterations."""
     for _ in range(iterations):
         leaf = select(node)
         simulation_result = simulate(leaf)
@@ -114,12 +115,14 @@ def mcts(node, iterations):
 
 
 def select(node):
+    """Select the leaf node to expand or simulate from."""
     while not node.children and not node.state.is_terminal():
         node = expand(node)
     return node
 
 
 def expand(node):
+    """Expand the node by adding a child for each legal action."""
     actions = node.state.get_legal_actions()
     for action in actions:
         print("[INFO]*************action: ", action)
@@ -130,18 +133,20 @@ def expand(node):
 
 
 def simulate(node):
+    """Simulate from the given node to a terminal state."""
     state = node.state
     while not state.is_terminal():
         action = state.get_random_action()
         state = state.perform_action(action)
-    return evaluate(state)
+    return state.evaluate()
 
 
 def backpropagate(node, result):
+    """Update the node's scores as the simulation result propagates back up the tree."""
     while node:
         node.visits += 1
         node.score += result
-        node = node.parentevaluate
+        node = node.parent.evaluate()
 
 
 @tvm.script.ir_module
