@@ -105,6 +105,12 @@ class Node(object):
         self.visits = 0
         self.score = 0
 
+    def __str__(self):
+        return f"The creature state is {self.state} and the parenet is {self.parent}"
+
+    def __repr__(self):
+        return f"Node('{self.state}', {self.parent})"
+
 
 def mcts(node, iterations):
     """Run MCTS for a given number of iterations."""
@@ -125,7 +131,6 @@ def expand(node):
     """Expand the node by adding a child for each legal action."""
     actions = node.state.get_legal_actions()
     for action in actions:
-        print("[INFO]*************action: ", action)
         child_state = node.state.perform_action(action)
         child_node = Node(child_state, parent=node)
         node.children.append(child_node)
@@ -146,6 +151,7 @@ def backpropagate(node, result):
     while node:
         node.visits += 1
         node.score += result
+        print("[INFO]************parent node: ", node)
         node = node.parent.evaluate()
 
 
