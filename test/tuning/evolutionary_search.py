@@ -42,18 +42,26 @@ Actions = [
 
 
 # objective function
-def objective(mod, target, name, inputs):
+def objective(mod, target, name, inputs, gflop):
+    """We design an objective function. If compile and runtime error happens,
+    then the score is quiet large.
+    """
+
     try:
         myfunc = tvm.build(mod, target=target, name=name)
     except:
-        return -10
+        return 0.0
 
     try:
         myfunc(*inputs)
     except:
-        return -10
+        return 0.0
 
-    return 100
+    evaluator = myfunc.time_evaluator(myfunc.entry_name, target, number=10)
+    # gflops = (n_size * m_size * k_size) * 2 / 1e9
+    time_ms = evaluator(*inputs).mean * 1e3
+    print("%f ms, %f GOPS" % (time_ms, gflops / (time_ms / 1e3)))
+    return gflops / (time_ms / 1e3)
 
 
 def perform_action(mod, target, action):
@@ -87,6 +95,8 @@ def es_comma(mod, n_iter, step_size, mu, lam):
     # perform the search
     for epoch in range(n_iter):
         states = [perform_action(mod, target, action) for action in population]
+        for mod in states:
+            print(mod)
         # evaluate fitness for the population
         scores = [objective(mod, target, name, inputs) for mod in states]
         # rank scores in ascending order
@@ -155,7 +165,6 @@ def ref_program(x):
 if __name__ == "__main__":
     # seed the pseudorandom number generator
     seed(1)
-
     dev = tvm.device("cuda", 0)
     a_np = np.random.uniform(size=(64, 1280)).astype("float32")
     c_np = ref_program(a_np)
@@ -165,7 +174,7 @@ if __name__ == "__main__":
     target = Target("nvidia/nvidia-a100", host="llvm")
     name = "softmax"
     # define the total iterations
-    n_iter = 1000
+    n_iter = 100
     # define the maximum step size
     step_size = 0.15
     # number of parents selected
