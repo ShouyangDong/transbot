@@ -190,22 +190,19 @@ class MCTSr(BaseModel):
 
 class MCTSrGPT4o(MCTSr):
     def zero_shot(self) -> str:
-        response = openai_chat_completion(
-            messages=[
-                {
-                    "role": "system",
-                    "content": "The user will provide a problem. Solve the problem. Think step by step.",
-                },
-                {
-                    "role": "user",
-                    "content": f"<problem>\n{self.problem}\n</problem>",
-                },
-            ],
-            model=gpt_4o_prompt_config.model,
-            max_tokens=4000,
+        """Generates a design space for a given `action`. It calls `generate_design_space()`
+        with specific parameters to apply the given scheduling rule (`action`) to the module.
+        The function returns a new `ProgramState` object, which represents the new program
+        state after applying the action."""
+        # TODO(dongshouyang):change the spaces
+        spaces = generate_design_space(
+            kind="cuda",
+            mod=mod,
+            target=target,
+            types=None,
+            sch_rules=[action],
         )
-        assert response.choices[0].message.content is not None
-        return response.choices[0].message.content
+        return spaces[0].mod
 
     def self_refine(self, node: MCTSNode) -> MCTSNode:
         critique_response = openai_chat_completion(
@@ -263,45 +260,17 @@ class MCTSrGPT4o(MCTSr):
         )
 
     def _evaluate_answer(self, node: MCTSNode) -> int:
-        messages = [
-            {
-                "role": "system",
-                "content": gpt_4o_prompt_config.evaluate_system_prompt,
-            },
-            {
-                "role": "user",
-                "content": "\n\n".join(
-                    [
-                        f"<problem>\n{self.problem}\n</problem>",
-                        f"<answer>\n{node.answer}\n</answer>",
-                    ]
-                ),
-            },
-        ]
-        for attempt in range(3):
-            try:
-                response = openai_chat_completion(
-                    messages=messages,
-                    model=gpt_4o_prompt_config.model,
-                    max_tokens=4000,
-                )
-                assert response.choices[0].message.content is not None
-                return int(response.choices[0].message.content)
-            except ValueError:
-                messages.extend(
-                    [
-                        {
-                            "role": "assistant",
-                            "content": response.choices[0].message.content,
-                        },
-                        {
-                            "role": "user",
-                            "content": "Failed to parse reward as an integer.",
-                        },
-                    ]
-                )
-                if attempt == 2:
-                    raise
+        """Evaluate the final script. If the result is correct, then returns 1, otherwise, returns 0."""
+        try:
+            myfunc = tvm.build(node.mod, target=node.target, name=node.name)
+        except:
+            return 0
+
+        try:
+            myfunc(*inputs)
+        except:
+            return 0
+        return 1
 
 
 def print_tree(node: MCTSNode | None, level: int = 0):
