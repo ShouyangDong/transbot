@@ -2,12 +2,76 @@ import math
 from enum import Enum
 from pydantic import BaseModel
 import numpy as np
+import tvm
+import tvm.testing
+from tvm.meta_schedule.testing.space_generation import generate_design_space
+
 
 ROOT_UCT_SCORE = 10000
 
+Actions = [
+    ms.schedule_rule.AutoBind(),
+    ms.schedule_rule.AutoInline(
+        into_producer=True,
+        into_consumer=True,
+        inline_const_tensor=True,
+        disallow_if_then_else=False,
+        require_injective=False,
+        require_ordered=False,
+    ),
+    ms.schedule_rule.CrossThreadReduction(
+        thread_extents=[4, 8, 16, 32, 64, 128, 256, 512]
+    ),
+    ms.schedule_rule.MultiLevelTilingWithIntrin(
+        structure="SSRSRS",
+        tile_binds=None,
+        max_innermost_factor=64,
+        vector_load_lens=None,
+        reuse_read=None,
+    ),
+    ms.schedule_rule.ParallelizeVectorizeUnroll(
+        max_jobs_per_core=-1,  # disable parallelize
+        max_vectorize_extent=-1,  # disable vectorize
+        unroll_max_steps=[0, 16, 64, 512, 1024],
+        unroll_explicit=True,
+    ),
+    ms.schedule_rule.RandomComputeLocation(),
+    ms.schedule_rule.InlineConstantScalars(),
+]
+
+ActionNameMap = {
+    ms.schedule_rule.AutoBind(): "Auto Bind",
+    ms.schedule_rule.AutoInline(
+        into_producer=True,
+        into_consumer=True,
+        inline_const_tensor=True,
+        disallow_if_then_else=True,
+        require_injective=False,
+        require_ordered=False,
+    ): "AutoInline",
+    ms.schedule_rule.CrossThreadReduction(
+        thread_extents=[4, 8, 16, 32, 64, 128, 256, 512]
+    ): "CrossThreadReduction",
+    ms.schedule_rule.MultiLevelTilingWithIntrin(
+        structure="SSRSRS",
+        tile_binds=None,
+        max_innermost_factor=64,
+        vector_load_lens=None,
+        reuse_read=None,
+    ): "MultiLevelTilingWithIntrin",
+    ms.schedule_rule.ParallelizeVectorizeUnroll(
+        max_jobs_per_core=-1,
+        max_vectorize_extent=-1,
+        unroll_max_steps=[0, 16, 64, 512, 1024],
+        unroll_explicit=True,
+    ): "ParallelizeVectorizeUnroll",
+    ms.schedule_rule.RandomComputeLocation(): "RandomComputeLocation",
+    ms.schedule_rule.InlineConstantScalars(): "InlineConstantScalars",
+}
+
 
 class MCTSNode(BaseModel):
-    answer: str
+    action: str
     parent: MCTSNode | None = None
     children: list[MCTSNode] = []
     visits: int = 0
@@ -18,7 +82,7 @@ class MCTSNode(BaseModel):
         self.children.append(child_node)
 
     def __repr__(self):
-        return f"MCTSNode(answer={self.answer}, Q={self.Q:.2f}, visits={self.visits})"
+        return f"MCTSNode(action={ActionNameMap[self.action]}, Q={self.Q:.2f}, visits={self.visits})"
 
     def add_reward(self, reward: int):
         self.reward_samples.append(reward)
@@ -37,7 +101,7 @@ class SelectionPolicy(Enum):
 
 class InitializeStrategy(Enum):
     ZERO_SHOT = 1
-    DUMMY_ANSWER = 2
+    DUMMY_action = 2
 
 
 class MCTSr(BaseModel):
@@ -51,7 +115,7 @@ class MCTSr(BaseModel):
     selection_policy: SelectionPolicy = SelectionPolicy.IMPORTANCE_SAMPLING
     initialize_strategy: InitializeStrategy = InitializeStrategy.ZERO_SHOT
 
-    root: MCTSNode = MCTSNode(answer="I don't know.")
+    root: MCTSNode = MCTSNode(action="I don't know.")
 
     critiques: list[str] = []
     refinements: list[str] = []
@@ -61,12 +125,12 @@ class MCTSr(BaseModel):
     def self_refine(self, node: MCTSNode) -> MCTSNode:
         raise NotImplementedError()
 
-    def _evaluate_answer(self, node: MCTSNode) -> int:
+    def _evaluate_action(self, node: MCTSNode) -> int:
         raise NotImplementedError()
 
     def self_evaluate(self, node: MCTSNode):
-        """Evaluate the quality of the answer. Sample `num_samples` times and average the results."""
-        reward = self._evaluate_answer(node)
+        """Evaluate the quality of the action. Sample `num_samples` times and average the results."""
+        reward = self._evaluate_action(node)
 
         if reward > self.reward_limit:
             reward -= self.excess_reward_penalty
@@ -146,15 +210,15 @@ class MCTSr(BaseModel):
             raise ValueError(f"Invalid selection policy: {self.selection_policy}")
 
     def zero_shot(self) -> str:
-        """Generate a zero-shot answer."""
+        """Generate a zero-shot action."""
         raise NotImplementedError()
 
     def initialize(self):
-        """Generate a zero-shot answer."""
+        """Generate a zero-shot action."""
         if self.initialize_strategy == InitializeStrategy.ZERO_SHOT:
-            self.root = MCTSNode(answer=self.zero_shot())
-        elif self.initialize_strategy == InitializeStrategy.DUMMY_ANSWER:
-            self.root = MCTSNode(answer="I don't know.")
+            self.root = MCTSNode(action=self.zero_shot())
+        elif self.initialize_strategy == InitializeStrategy.DUMMY_action:
+            self.root = MCTSNode(action="I don't know.")
         else:
             raise ValueError(f"Invalid initialize strategy: {self.initialize_strategy}")
 
@@ -168,9 +232,9 @@ class MCTSr(BaseModel):
             self.self_evaluate(child)
             self.backpropagate(child)
 
-        return self.get_best_answer()
+        return self.get_best_action()
 
-    def get_best_answer(self):
+    def get_best_action(self):
         from collections import deque
 
         to_visit = deque([self.root])
@@ -182,14 +246,14 @@ class MCTSr(BaseModel):
                 best_node = current_node
             to_visit.extend(current_node.children)
 
-        return best_node.answer
+        return best_node.action
 
     def print(self):
         print_tree(self.root)
 
 
 class MCTSrGPT4o(MCTSr):
-    def zero_shot(self) -> str:
+    def zero_shot(self, node: MCTSNode) -> str:
         """Generates a design space for a given `action`. It calls `generate_design_space()`
         with specific parameters to apply the given scheduling rule (`action`) to the module.
         The function returns a new `ProgramState` object, which represents the new program
@@ -197,10 +261,10 @@ class MCTSrGPT4o(MCTSr):
         # TODO(dongshouyang):change the spaces
         spaces = generate_design_space(
             kind="cuda",
-            mod=mod,
-            target=target,
+            mod=node.mod,
+            target=node.target,
             types=None,
-            sch_rules=[action],
+            sch_rules=[node.action],
         )
         return spaces[0].mod
 
@@ -216,7 +280,7 @@ class MCTSrGPT4o(MCTSr):
                     "content": "\n\n".join(
                         [
                             f"<problem>\n{self.problem}\n</problem>",
-                            f"<current_answer>\n{node.answer}\n</current_answer>",
+                            f"<current_action>\n{node.action}\n</current_action>",
                         ]
                     ),
                 },
@@ -228,7 +292,7 @@ class MCTSrGPT4o(MCTSr):
         assert critique is not None
         self.critiques.append(critique)
 
-        refined_answer_response = openai_chat_completion(
+        refined_action_response = openai_chat_completion(
             messages=[
                 {
                     "role": "system",
@@ -239,7 +303,7 @@ class MCTSrGPT4o(MCTSr):
                     "content": "\n\n".join(
                         [
                             f"<problem>\n{self.problem}\n</problem>",
-                            f"<current_answer>\n{node.answer}\n</current_answer>",
+                            f"<current_action>\n{node.action}\n</current_action>",
                             f"<critique>\n{critique}\n</critique>",
                         ]
                     ),
@@ -249,17 +313,17 @@ class MCTSrGPT4o(MCTSr):
             max_tokens=4000,
             response_format={"type": "json_object"},
         )
-        refined_answer = RefineResponse.model_validate_json(
-            refined_answer_response.choices[0].message.content
+        refined_action = RefineResponse.model_validate_json(
+            refined_action_response.choices[0].message.content
         )
-        self.refinements.append(refined_answer)
+        self.refinements.append(refined_action)
 
         return MCTSNode(
-            answer=f"# Thought {refined_answer.thought}\n\n# Answer\n{refined_answer.answer}",
+            action=f"# Thought {refined_action.thought}\n\n# action\n{refined_action.action}",
             parent=node,
         )
 
-    def _evaluate_answer(self, node: MCTSNode) -> int:
+    def _evaluate_action(self, node: MCTSNode) -> int:
         """Evaluate the final script. If the result is correct, then returns 1, otherwise, returns 0."""
         try:
             myfunc = tvm.build(node.mod, target=node.target, name=node.name)
