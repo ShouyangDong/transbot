@@ -9,6 +9,7 @@ from tvm import meta_schedule as ms
 from tvm.script import tir as T
 from tvm.target import Target
 from tvm.meta_schedule.testing.space_generation import generate_design_space
+from tqdm import tqdm
 
 Actions = [
     ms.schedule_rule.AutoBind(),
@@ -92,12 +93,13 @@ def es_comma(mod, n_iter, step_size, mu, lam, gflop):
         while candidate is None:
             candidate = random.choice(Actions)
         population.append(candidate)
-
+    population = Actions
     # perform the search
-    for epoch in range(n_iter):
+    for epoch in tqdm(range(n_iter)):
         states = [perform_action(mod, target, action) for action in population]
         for mod in states:
-            print(mod)
+            # print(mod)
+            pass
         # evaluate fitness for the population
         scores = [objective(mod, target, name, inputs, gflop) for mod in states]
         # rank scores in ascending order
