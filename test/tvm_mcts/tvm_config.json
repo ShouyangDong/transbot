@@ -1,0 +1,26 @@
+{"num_hidden_layers" : 3,
+ "num_hidden_units": 200,
+ "V_alpha":0.0001,
+ "pi_alpha":0.00004,
+ "b1_adam":0.9,
+ "b2_adam":0.99,
+ "eps_adam":1e-5,
+ "wd_adam":1e-6,
+ "discount":0.99,
+ "use_mixed_value":true,
+ "value_scale":0.1,
+ "value_target":"maxq",
+ "target_update_frequency": 100,
+ "batch_size":1,
+ "avg_return_smoothing":0.9,
+ "num_simulations":50,
+ "num_steps":100000,
+ "eval_frequency":100,
+ "environment": "TvmGo",
+ "env_config":
+ {"grid_size":5,
+  "timeout":64
+ },
+ "activation": "elu"
+ }
+
