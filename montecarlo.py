@@ -1,11 +1,11 @@
 import math
 from enum import Enum
-from pydantic import BaseModel
+
 import numpy as np
 import tvm
 import tvm.testing
+from pydantic import BaseModel
 from tvm.meta_schedule.testing.space_generation import generate_design_space
-
 
 ROOT_UCT_SCORE = 10000
 

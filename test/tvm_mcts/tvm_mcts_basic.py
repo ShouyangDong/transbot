@@ -14,17 +14,16 @@
 # ==============================================================================
 """A demo of Graphviz visualization of a search tree."""
 
+import warnings
 
-from absl import app
-from absl import flags
 import chex
 import jax
 import jax.numpy as jnp
 import mctx
-from tvm_environments import build_env
+from absl import app, flags
 from jax import vmap
+from tvm_environments import build_env
 from utils import convert_tree_to_graph
-import warnings
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
 

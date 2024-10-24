@@ -1,15 +1,15 @@
-from numpy import argsort
-from numpy.random import seed
-
 import random
+
 import numpy as np
 import tvm
 import tvm.testing
+from numpy import argsort
+from numpy.random import seed
+from tqdm import tqdm
 from tvm import meta_schedule as ms
+from tvm.meta_schedule.testing.space_generation import generate_design_space
 from tvm.script import tir as T
 from tvm.target import Target
-from tvm.meta_schedule.testing.space_generation import generate_design_space
-from tqdm import tqdm
 
 Actions = [
     ms.schedule_rule.AutoBind(),
