@@ -27,6 +27,8 @@ import pygraphviz
 from jax import jit, vmap, grad
 from utils import convert_tree_to_graph
 
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 FLAGS = flags.FLAGS
 flags.DEFINE_integer("seed", 42, "Random seed.")

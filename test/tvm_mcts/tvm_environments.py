@@ -91,6 +91,8 @@ class TvmGo:
         self.mod_name = mod_name
         self.best_reward = 0.01
         self.best_optimizer_ids = None
+        self.best_optimizer_space_ids = None
+        self.best_optimizer_space_num = 0
 
     def perform_action(self, actions):
         """Generates a design space for a given `action`. It calls `generate_design_space()`
@@ -106,8 +108,11 @@ class TvmGo:
             sch_rules = actions,
         )
         
-        score =  objective(spaces[0].mod, self.tvm_tgt, self.mod_name, self.inputs)
-        return spaces[0].mod,score
+        scores =  [objective(spaces[_i].mod, self.tvm_tgt, self.mod_name, self.inputs) for _i in range(len(spaces))]
+        score = np.array(scores).max()        
+        # score =  objective(spaces[0].mod, self.tvm_tgt, self.mod_name, self.inputs)
+
+        return spaces[0].mod,score,len(spaces),np.array(scores).argmax()
 
     # @partial(jit, static_argnums=(0,))
     @jit
@@ -124,14 +129,21 @@ class TvmGo:
 
         # tvm_space,reward = self.perform_action(cur_actions)
         try:
-            _tvm_space,_reward = self.perform_action(cur_actions)
-
-            rewards = []
-            for _i in range(20):
-                _tvm_space,_reward = self.perform_action(cur_actions)
-                rewards.append(_reward)
+            _tvm_space,reward,n_space,best_space_id = self.perform_action(cur_actions)
+            # rewards = []
+            # for _i in range(20):
+            #     _tvm_space,_reward = self.perform_action(cur_actions)
+            #     rewards.append(_reward)
             
-            reward = np.stack(rewards).mean()
+            # reward = np.stack(rewards).mean()
+
+            if reward > self.best_reward:
+                self.best_reward = reward
+                self.best_optimizer_ids = cur_action_ids.val[0].tolist()
+                self.best_optimizer_space_ids = best_space_id
+                self.best_optimizer_space_num = n_space
+                
+            print(f'action:',cur_action_ids.val[0].tolist(),'reward:',reward,'space number',n_space,'best_reward:',self.best_reward,'best_reward_ids:',self.best_optimizer_ids,'number of spaces',self.best_optimizer_space_num,'best space id',self.best_optimizer_space_ids)
                 
         except:
             reward = 0.
@@ -140,11 +152,7 @@ class TvmGo:
         
         # if depth.val < 2:
         #     reward = reward + random.uniform(-0.2, 0.2)
-        if reward > self.best_reward:
-            self.best_reward = reward
-            self.best_optimizer_ids = cur_action_ids.val[0].tolist()
 
-        print(f'action:',cur_action_ids.val[0].tolist(),'reward:',reward,'best_reward:',self.best_reward,'best_reward_ids:',self.best_optimizer_ids)
         optimize_grid.at[depth,action_id].set(True)
         # Treminated if we reach the goal
         terminal = depth > self.optimizer_len 
