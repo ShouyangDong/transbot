@@ -1,10 +1,16 @@
+<<<<<<< HEAD
 
+=======
+>>>>>>> 80a7971a960a6f3e8c51208ce1d1fba49f137455
 import tvm
 import tvm.testing
 from tvm.script import tir as T
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 80a7971a960a6f3e8c51208ce1d1fba49f137455
 @tvm.script.ir_module
 class Softmax:
     @T.prim_func

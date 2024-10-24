@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from tvm_environments import build_env,ActionSpace
 
 
@@ -10,6 +11,20 @@ def _main():
     for _ii in range(100):
         stat,reward = env.perform_action(optimizer_ops)
         print(f'reward_{_ii}',reward)
+=======
+from tvm_environments import build_env, ActionSpace
+
+
+def _main():
+    env = build_env()
+
+    optimizer_ids = [2, 2, 3, 3, 0]
+    optimizer_ops = [ActionSpace[_ii] for _ii in optimizer_ids]
+
+    for _ii in range(100):
+        stat, reward = env.perform_action(optimizer_ops)
+        print(f"reward_{_ii}", reward)
+>>>>>>> 80a7971a960a6f3e8c51208ce1d1fba49f137455
     # 100 轮测试，最高reward22，最低3
     # 可能需要独占机器，才可以获得正确的值。
     # reward_0 12.213831508166656
@@ -24,6 +39,7 @@ def _main():
     # reward_9 11.940298507462686
     # reward2 0.002859358755465498
 
+<<<<<<< HEAD
 
     optimizer_ids = [2,2,3,3,]
     optimizer_ops = [ActionSpace[_ii] for _ii in optimizer_ids]
@@ -32,3 +48,18 @@ def _main():
 
 if __name__ == "__main__":
     _main() 
+=======
+    optimizer_ids = [
+        2,
+        2,
+        3,
+        3,
+    ]
+    optimizer_ops = [ActionSpace[_ii] for _ii in optimizer_ids]
+    stat, reward = env.perform_action(optimizer_ops)
+    print("reward2", reward)
+
+
+if __name__ == "__main__":
+    _main()
+>>>>>>> 80a7971a960a6f3e8c51208ce1d1fba49f137455

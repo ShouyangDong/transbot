@@ -1,7 +1,10 @@
 # 实验说明
 
+<<<<<<< HEAD
 conda activate py39
 
+=======
+>>>>>>> 80a7971a960a6f3e8c51208ce1d1fba49f137455
 ## 环境依赖：
 * jax
 * mctx==0.0.5
@@ -14,6 +17,7 @@ python tvm_mcts_basic.py
 ```
 
 
+<<<<<<< HEAD
 ## 代码介绍
 
 ### tvm_environments.py
@@ -37,6 +41,8 @@ python tvm_mcts_basic.py
 * 输出优化路径图: ./tvm_search_tree.png
 
 
+=======
+>>>>>>> 80a7971a960a6f3e8c51208ce1d1fba49f137455
 
 ## 实验分析
 * 当前机器并非独占，因此时间度量可能存在问题。
