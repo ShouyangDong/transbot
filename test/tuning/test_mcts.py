@@ -1,8 +1,9 @@
-from treelib import Tree
+import random
+
 import numpy as np
 import tvm
+from treelib import Tree
 from tvm import meta_schedule as ms
-import random
 
 
 def verify_runtime(node):

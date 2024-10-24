@@ -1,17 +1,13 @@
-import tvm
-from tvm import meta_schedule as ms
-import numpy as np
-from tvm.meta_schedule.testing.space_generation import generate_design_space
+from functools import partial
 
 import jax as jx
 import jax.numpy as jnp
+import numpy as np
+import tvm
 from jax import jit, lax
-
-from functools import partial
-
-# import operator
-
 from softmax import Softmax
+from tvm import meta_schedule as ms
+from tvm.meta_schedule.testing.space_generation import generate_design_space
 from tvm.target import Target
 
 ActionSpace = [
@@ -99,6 +95,8 @@ class TvmGo:
         self.mod_name = mod_name
         self.best_reward = 0.01
         self.best_optimizer_ids = None
+        self.best_optimizer_space_ids = None
+        self.best_optimizer_space_num = 0
 
     def perform_action(self, actions):
         """Generates a design space for a given `action`. It calls `generate_design_space()`
@@ -114,10 +112,14 @@ class TvmGo:
             sch_rules=actions,
         )
 
-        score = objective(spaces[0].mod, self.tvm_tgt, self.mod_name, self.inputs)
-        return spaces[0].mod, score
+        scores = [
+            objective(spaces[_i].mod, self.tvm_tgt, self.mod_name, self.inputs)
+            for _i in range(len(spaces))
+        ]
+        score = np.array(scores).max()
+        index = np.array(scores).argmax()
+        return spaces[index].mod, score, len(spaces), index
 
-    # @partial(jit, static_argnums=(0,))
     @jit
     def step(self, action_id, env_state):
         # env_state 我需要得到如下信息。
@@ -126,46 +128,29 @@ class TvmGo:
         # -- depth: 访问深度
         optimize_grid, trajectory, depth = env_state
         trajectory = trajectory.at[depth].set(action_id)
-        cur_action_ids = lax.dynamic_slice(
-            trajectory, (0,), (depth.val[0] + 1,)
-        )  # trajectory[:depth + 1]
-        # cur_actions = dynamic_action_selection(cur_action_ids.val)
+        cur_action_ids = lax.dynamic_slice(trajectory, (0,), (depth.val[0] + 1,))
         cur_actions = [
             ActionSpace[_i] for _i in jx.device_get(cur_action_ids.val[0]).tolist()
         ]
 
-        # tvm_space,reward = self.perform_action(cur_actions)
         try:
-            _tvm_space, _reward = self.perform_action(cur_actions)
+            _tvm_space, reward, n_space, best_space_id = self.perform_action(
+                cur_actions
+            )
 
-            rewards = []
-            for _i in range(20):
-                _tvm_space, _reward = self.perform_action(cur_actions)
-                rewards.append(_reward)
+            if reward > self.best_reward:
+                self.best_reward = reward
+                self.best_optimizer_ids = cur_action_ids.val[0].tolist()
+                self.best_optimizer_space_ids = best_space_id
+                self.best_optimizer_space_num = n_space
 
-            reward = np.stack(rewards).mean()
+            print(
+                f""" Action: {cur_action_ids.val[0].tolist()} Reward: {reward} Space Number: {n_space} Best Reward: {self.best_reward} Best Reward IDs: {self.best_optimizer_ids} Number of Spaces: {self.best_optimizer_space_num} Best Space ID: {self.best_optimizer_space_ids} """
+            )
 
         except:
             reward = 0.0
 
-        # reward = max(0.8,reward)
-
-        # if depth.val < 2:
-        #     reward = reward + random.uniform(-0.2, 0.2)
-        if reward > self.best_reward:
-            self.best_reward = reward
-            self.best_optimizer_ids = cur_action_ids.val[0].tolist()
-
-        print(
-            f"action:",
-            cur_action_ids.val[0].tolist(),
-            "reward:",
-            reward,
-            "best_reward:",
-            self.best_reward,
-            "best_reward_ids:",
-            self.best_optimizer_ids,
-        )
         optimize_grid.at[depth, action_id].set(True)
         # Treminated if we reach the goal
         terminal = depth > self.optimizer_len
@@ -253,15 +238,6 @@ def _test():
         0,
     ]
     env_state = optimize_path, optimize_grid, trajectory, depth
-
-    # scores = np.zeros([7,7],dtype = np.float32)
-    # for _i1 in range(7):
-    #     for _j2  in tqdm(range(7)):
-    #         _actions = [ActionSpace[_i1],ActionSpace[_j2]]
-    #         mod,_scores = tvm_env.perform_action(_actions)
-    #         scores[_i1,_j2] = _scores
-
-    # print(scores)
     tvm_env.step(1, env_state)
 
 

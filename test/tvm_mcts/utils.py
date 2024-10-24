@@ -1,10 +1,10 @@
-import pygraphviz
-import jax
-import mctx
-import chex
-import jax.numpy as jnp
-
 from typing import Optional, Sequence
+
+import chex
+import jax
+import jax.numpy as jnp
+import mctx
+import pygraphviz
 
 
 def convert_tree_to_graph(

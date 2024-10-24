@@ -1,7 +1,6 @@
 from typing import List
 
 import pytest
-
 import tvm
 import tvm.testing
 from tvm import meta_schedule as ms

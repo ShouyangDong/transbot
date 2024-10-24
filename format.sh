@@ -14,6 +14,9 @@ find "$1" -type f -name "*.py" | while read -r file; do
   # Remove unused imports
   autoflake --remove-all-unused-imports --in-place "$file"
   
+  # Sort import modules
+  isort "$file"
+
   # Format the code using black
   black "$file"
 done

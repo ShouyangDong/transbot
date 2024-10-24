@@ -1,7 +1,6 @@
 import tempfile
 
 import numpy as np
-
 import tvm
 import tvm.testing
 from tvm import meta_schedule as ms

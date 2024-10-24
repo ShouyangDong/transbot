@@ -1,8 +1,8 @@
 import logging
 import tempfile
 
-import tvm
 import numpy as np
+import tvm
 from tvm import meta_schedule as ms
 from tvm.script import tir as T
 from tvm.target import Target
