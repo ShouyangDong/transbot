@@ -1,3 +1,4 @@
+import tempfile
 from functools import partial
 
 import jax as jx
@@ -58,7 +59,7 @@ def objective(mod, target, name, inputs):
     except:
         return 0.0
     evaluator = myfunc.time_evaluator(
-        myfunc.entry_name, tvm.device("cuda", 0), number=10
+        myfunc.entry_name, tvm.device("cuda", 0), number=100
     )
     time_ms = evaluator(*inputs).mean * 1e3
     return GFLOPS / (time_ms / 1e3)
@@ -98,6 +99,23 @@ class TvmGo:
         self.best_optimizer_space_ids = None
         self.best_optimizer_space_num = 0
 
+    def pick_best_annotation(self, mod):
+        with tempfile.TemporaryDirectory() as work_dir:
+            target = Target("nvidia/nvidia-a100", host="llvm")
+            database = ms.tir_integration.tune_tir(
+                mod=mod,
+                target=self.tvm_tgt,
+                work_dir=work_dir,
+                max_trials_global=32,
+                num_trials_per_iter=16,
+            )
+            sch = ms.tir_integration.compile_tir(database, mod, self.tvm_tgt)
+
+        if sch is None:
+            return None
+        else:
+            return sch.mod
+
     def perform_action(self, actions):
         """Generates a design space for a given `action`. It calls `generate_design_space()`
         with specific parameters to apply the given scheduling rule (`action`) to the module.
@@ -112,13 +130,17 @@ class TvmGo:
             sch_rules=actions,
         )
 
-        scores = [
-            objective(spaces[_i].mod, self.tvm_tgt, self.mod_name, self.inputs)
-            for _i in range(len(spaces))
-        ]
+        scores = []
+        for space in spaces:
+            mod = self.pick_best_annotation(space.mod)
+            if mod is None:
+                scores.append(0.0)
+            else:
+                scores.append(objective(mod, self.tvm_tgt, self.mod_name, self.inputs))
+
         score = np.array(scores).max()
         index = np.array(scores).argmax()
-        return spaces[index].mod, score, len(spaces), index
+        return mod, score, len(spaces), index
 
     @jit
     def step(self, action_id, env_state):
