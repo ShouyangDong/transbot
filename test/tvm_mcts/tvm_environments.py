@@ -101,7 +101,6 @@ class TvmGo:
 
     def pick_best_annotation(self, mod):
         with tempfile.TemporaryDirectory() as work_dir:
-            target = Target("nvidia/nvidia-a100", host="llvm")
             database = ms.tir_integration.tune_tir(
                 mod=mod,
                 target=self.tvm_tgt,
@@ -131,8 +130,10 @@ class TvmGo:
         )
 
         scores = []
+        modules = []
         for space in spaces:
             mod = self.pick_best_annotation(space.mod)
+            modules.append(mod)
             if mod is None:
                 scores.append(0.0)
             else:
@@ -140,7 +141,7 @@ class TvmGo:
 
         score = np.array(scores).max()
         index = np.array(scores).argmax()
-        return mod, score, len(spaces), index
+        return modules[index], score, len(spaces), index
 
     @jit
     def step(self, action_id, env_state):
