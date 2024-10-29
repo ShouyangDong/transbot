@@ -1,3 +1,3 @@
 [submodule "3rdparty/mctx"]
 	path = 3rdparty/mctx
-	url = https://github.com/google-deepmind/mctx
+	url = https://github.com/ShouyangDong/mctx.git

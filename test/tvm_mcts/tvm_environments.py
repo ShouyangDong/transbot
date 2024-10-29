@@ -124,7 +124,6 @@ class TvmGo:
         with specific parameters to apply the given scheduling rule (`action`) to the module.
         The function returns a new `ProgramState` object, which represents the new program
         state after applying the action."""
-        # TODO(dongshouyang):change the spaces
         spaces = generate_design_space(
             kind="cuda",
             mod=self.mod,
