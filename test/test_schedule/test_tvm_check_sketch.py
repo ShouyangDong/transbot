@@ -1,7 +1,6 @@
 import tempfile
 
 from tvm import meta_schedule as ms
-from tvm.meta_schedule.testing.space_generation import generate_design_space
 from tvm.script import tir as T
 from tvm.target import Target
 
@@ -33,25 +32,17 @@ def test_cuda_element_wise():
                     T.writes(B[vi, vj])
                     B[vi, vj] = A[vi, vj] + T.float32(1)
 
-    decision_0 = [
-        ("SampleCategorical", 5),
-    ]
     mod = element_wise
-    spaces = generate_design_space(
-        kind="cuda",
-        mod=mod,
-        target=Target("nvidia/nvidia-a100", host="llvm"),
-        types=ms.schedule_rule.AutoBind,
-    )
-
     with tempfile.TemporaryDirectory() as work_dir:
         target = Target("nvidia/nvidia-a100", host="llvm")
-        database = ms.tir_integration.tune_tir(
+        sch_rules = [ms.schedule_rule.AutoBind()]
+        space_gen = ms.space_generator.PostOrderApply(sch_rules=sch_rules)
+        database = ms.tune_tir(
             mod=mod,
             target=target,
             work_dir=work_dir,
-            max_trials_global=32,
-            num_trials_per_iter=16,
+            max_trials_global=10,
+            space=space_gen,
         )
         sch = ms.tir_integration.compile_tir(database, mod, target)
         if sch is None:

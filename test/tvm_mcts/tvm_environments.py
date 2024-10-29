@@ -1,3 +1,4 @@
+import logging
 import tempfile
 from functools import partial
 
@@ -10,6 +11,9 @@ from softmax import Softmax
 from tvm import meta_schedule as ms
 from tvm.meta_schedule.testing.space_generation import generate_design_space
 from tvm.target import Target
+
+logging.basicConfig()
+logging.getLogger("tvm.meta_schedule").setLevel(logging.INFO)
 
 ActionSpace = [
     ms.schedule_rule.AutoBind(),
