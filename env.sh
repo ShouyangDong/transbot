@@ -1,1 +1,1 @@
-export PYTHONPATH=3rdparty/mctx:$PYTHONPATH 
+export PYTHONPATH="$PYTHONPATH:$PWD/3rdparty/mctx"
