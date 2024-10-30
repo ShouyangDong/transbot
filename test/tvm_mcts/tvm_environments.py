@@ -9,7 +9,6 @@ import tvm
 from jax import jit, lax
 from softmax import Softmax
 from tvm import meta_schedule as ms
-from tvm.meta_schedule.testing.space_generation import generate_design_space
 from tvm.target import Target
 
 logging.basicConfig()
@@ -103,17 +102,18 @@ class TvmGo:
         self.best_optimizer_space_ids = None
         self.best_optimizer_space_num = 0
 
-    def pick_best_annotation(self, mod):
+    def pick_best_annotation(self, actions):
         with tempfile.TemporaryDirectory() as work_dir:
+            spaces = ms.space_generator.PostOrderApply(sch_rules=actions)
             database = ms.tir_integration.tune_tir(
-                mod=mod,
+                mod=self.mod,
                 target=self.tvm_tgt,
                 work_dir=work_dir,
                 max_trials_global=32,
                 num_trials_per_iter=16,
+                space=spaces,
             )
-            sch = ms.tir_integration.compile_tir(database, mod, self.tvm_tgt)
-
+        sch = ms.tir_integration.compile_tir(database, self.mod, self.tvm_tgt)
         if sch is None:
             return None
         else:
@@ -124,27 +124,9 @@ class TvmGo:
         with specific parameters to apply the given scheduling rule (`action`) to the module.
         The function returns a new `ProgramState` object, which represents the new program
         state after applying the action."""
-        spaces = generate_design_space(
-            kind="cuda",
-            mod=self.mod,
-            target=self.tvm_tgt,
-            types=None,
-            sch_rules=actions,
-        )
-
-        scores = []
-        modules = []
-        for space in spaces:
-            mod = self.pick_best_annotation(space.mod)
-            modules.append(mod)
-            if mod is None:
-                scores.append(0.0)
-            else:
-                scores.append(objective(mod, self.tvm_tgt, self.mod_name, self.inputs))
-
-        score = np.array(scores).max()
-        index = np.array(scores).argmax()
-        return modules[index], score, len(spaces), index
+        best_mod = self.pick_best_annotation(actions)
+        score = objective(best_mod, self.tvm_tgt, self.mod_name, self.inputs)
+        return best_mod, score
 
     @jit
     def step(self, action_id, env_state):
@@ -160,18 +142,14 @@ class TvmGo:
         ]
 
         try:
-            _tvm_space, reward, n_space, best_space_id = self.perform_action(
-                cur_actions
-            )
+            _tvm_space, reward = self.perform_action(cur_actions)
 
             if reward > self.best_reward:
                 self.best_reward = reward
                 self.best_optimizer_ids = cur_action_ids.val[0].tolist()
-                self.best_optimizer_space_ids = best_space_id
-                self.best_optimizer_space_num = n_space
 
             print(
-                f""" Action: {cur_action_ids.val[0].tolist()} Reward: {reward} Space Number: {n_space} Best Reward: {self.best_reward} Best Reward IDs: {self.best_optimizer_ids} Number of Spaces: {self.best_optimizer_space_num} Best Space ID: {self.best_optimizer_space_ids} """
+                f""" Action: {cur_action_ids.val[0].tolist()} Reward: {reward} Best Reward: {self.best_reward} Best Reward IDs: {self.best_optimizer_ids}"""
             )
 
         except:
